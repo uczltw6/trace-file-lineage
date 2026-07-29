@@ -1,0 +1,158 @@
+{
+  "all_runtime_cases_passed": true,
+  "cases": [
+    {
+      "case": "ambiguous producers",
+      "duration_seconds": 0.081433,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "scenarios.test_scenarios.ScenarioTests.test_04_ambiguous_producer"
+    },
+    {
+      "case": "near-match and current/old document versions",
+      "duration_seconds": 0.617749,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "optional.test_pdf_ocr_integration.PDFRuntimeIntegrationTests.test_real_pypdf_extraction_media_similarity_and_origin_ranking"
+    },
+    {
+      "case": "wrong timestamp/stem-only candidate",
+      "duration_seconds": 0.022696,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_release_hardening.SchemaAndSemanticsTests.test_timestamp_alone_never_creates_an_export_claim"
+    },
+    {
+      "case": "stale output assurance boundary",
+      "duration_seconds": 0.010092,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_interoperability.StaleAnalysisTests.test_stale_states_respect_confidence_boundaries"
+    },
+    {
+      "case": "duplicate hash copy versus captured rename",
+      "duration_seconds": 0.031068,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_release_hardening.SchemaAndSemanticsTests.test_copy_is_distinct_and_captured_rename_preserves_identity"
+    },
+    {
+      "case": "edited-after-export and multiple sources",
+      "duration_seconds": 0.223803,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "optional.test_pdf_ocr_integration.PDFRuntimeIntegrationTests.test_real_pypdf_extraction_media_similarity_and_origin_ranking"
+    },
+    {
+      "case": "user confirm/reject/undo",
+      "duration_seconds": 0.482499,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_release_hardening.SchemaAndSemanticsTests.test_confirm_reject_and_undo_are_persistent_and_authoritative"
+    },
+    {
+      "case": "150+ output receipt/clustering",
+      "duration_seconds": 0.066655,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "scenarios.test_scenarios.ScenarioTests.test_03_agent_run_150_images_clusters"
+    },
+    {
+      "case": "interrupted four-point recovery",
+      "duration_seconds": 1.540054,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_release_hardening.RecoveryAndExporterTests.test_forced_termination_at_four_boundaries_is_recoverable"
+    },
+    {
+      "case": "overlapping runs",
+      "duration_seconds": 0.021599,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_release_hardening.SchemaAndSemanticsTests.test_overlapping_boundaries_remain_temporal_not_causal"
+    },
+    {
+      "case": "Unicode/spaces/parentheses/normalization",
+      "duration_seconds": 0.000138,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_cross_platform.PortablePathTests.test_spaces_parentheses_chinese_unicode_normalization_and_long_paths"
+    },
+    {
+      "case": "symlink boundary",
+      "duration_seconds": 0.005061,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_cross_platform.PortablePathTests.test_symlink_targets_do_not_escape_or_duplicate_workspace"
+    },
+    {
+      "case": "malformed/encrypted documents",
+      "duration_seconds": 0.051651,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_extended.StructuredDocumentTests.test_odf_epub_malformed_encrypted_and_unsupported_degrade_cleanly"
+    },
+    {
+      "case": "archive bomb",
+      "duration_seconds": 0.027621,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_release_hardening.RecoveryAndExporterTests.test_archive_bomb_degrades_to_metadata_only"
+    },
+    {
+      "case": "create/modify/delete recall",
+      "duration_seconds": 0.024988,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_release_hardening.SchemaAndSemanticsTests.test_captured_create_modify_delete_recall_is_complete"
+    },
+    {
+      "case": "secret redaction",
+      "duration_seconds": 0.020984,
+      "failures": [],
+      "passed": true,
+      "skip_reasons": [],
+      "skipped": false,
+      "test": "unit.test_interoperability.OptionalAdapterTests.test_private_agent_session_content_is_not_indexed_or_stored_by_default"
+    }
+  ],
+  "p0_metrics": {
+    "ambiguity_collapses": 0,
+    "captured_create_modify_delete_recall": "100%",
+    "captured_rename_identity_preservation": "100%",
+    "copies_misclassified_as_renames": 0,
+    "false_verified_relationships": 0,
+    "fixture_secrets_retained": 0
+  },
+  "schema_version": 2
+}

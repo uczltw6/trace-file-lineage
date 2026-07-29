@@ -1,0 +1,32 @@
+{
+  "name": "trace-file-lineage",
+  "version": "0.5.0",
+  "description": "Local-first provenance and artifact navigation for files produced by code, documents, commands, and agent tasks.",
+  "author": {
+    "name": "Trace File Lineage Contributors"
+  },
+  "license": "MIT",
+  "keywords": [
+    "provenance",
+    "lineage",
+    "artifacts",
+    "forensics"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Trace File Lineage",
+    "shortDescription": "Trace artifact origins, impact, and task runs.",
+    "longDescription": "Investigate where local files came from, rank historical producer candidates with explicit uncertainty, record future task changes, and export focused lineage views.",
+    "developerName": "Trace File Lineage Contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Local analysis",
+      "Artifact provenance"
+    ],
+    "defaultPrompt": [
+      "Find the code and data that produced this artifact.",
+      "Show what depends on this input file.",
+      "Explain the files created by this recorded run."
+    ]
+  }
+}

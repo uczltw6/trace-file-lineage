@@ -1,0 +1,4 @@
+interface:
+  display_name: "Trace File Lineage"
+  short_description: "Trace artifact origins, impact, and task runs"
+  default_prompt: "Use $trace-file-lineage to explain where this artifact came from and what depends on it."

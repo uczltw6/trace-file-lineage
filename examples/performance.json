@@ -1,0 +1,48 @@
+{
+  "benchmarks": [
+    {
+      "cold_seconds": 3.38954,
+      "database_bytes": 6246400,
+      "image_files": 150,
+      "no_change_seconds": 0.11745,
+      "one_file_changed_seconds": 0.122249,
+      "peak_memory_bytes": {
+        "cold": 39026688,
+        "no_change": 42237952,
+        "one_file": 42237952
+      },
+      "query_latency": {
+        "p50_ms": 0.7289,
+        "p95_ms": 0.8082
+      },
+      "text_files": 1000,
+      "total_files": 1150,
+      "warm_speedup": 28.859
+    },
+    {
+      "cold_seconds": 43.522191,
+      "database_bytes": 55885824,
+      "image_files": 150,
+      "no_change_seconds": 1.076995,
+      "one_file_changed_seconds": 1.060953,
+      "peak_memory_bytes": {
+        "cold": 92749824,
+        "no_change": 118030336,
+        "one_file": 118112256
+      },
+      "query_latency": {
+        "p50_ms": 6.2526,
+        "p95_ms": 6.7026
+      },
+      "text_files": 10000,
+      "total_files": 10150,
+      "warm_speedup": 40.411
+    }
+  ],
+  "environment": {
+    "platform": "darwin",
+    "python": "3.14.0"
+  },
+  "method": "mixed native text plus 150 image artifacts; cold/no-change/one-file scans and 40 indexed text queries",
+  "schema_version": 2
+}

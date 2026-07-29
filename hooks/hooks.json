@@ -1,0 +1,31 @@
+{
+  "description": "Best-effort Codex task-boundary file lineage capture.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$PLUGIN_ROOT/platforms/codex/hook.py\"",
+            "commandWindows": "py -3 -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'platforms','codex','hook.py'),run_name='__main__')\"",
+            "timeout": 30,
+            "statusMessage": "Capturing file-lineage baseline"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$PLUGIN_ROOT/platforms/codex/hook.py\"",
+            "commandWindows": "py -3 -c \"import os,runpy;runpy.run_path(os.path.join(os.environ['PLUGIN_ROOT'],'platforms','codex','hook.py'),run_name='__main__')\"",
+            "timeout": 30,
+            "statusMessage": "Recording file-lineage changes"
+          }
+        ]
+      }
+    ]
+  }
+}

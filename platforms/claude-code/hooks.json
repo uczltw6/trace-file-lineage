@@ -1,0 +1,33 @@
+{
+  "description": "Best-effort Claude Code task-boundary file lineage capture using shell-independent exec form.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/platforms/claude-code/hook.py"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/platforms/claude-code/hook.py"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

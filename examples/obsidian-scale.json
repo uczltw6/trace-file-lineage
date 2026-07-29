@@ -1,0 +1,14 @@
+{
+  "backlink_updated_after_rename": true,
+  "edge_count": 9999,
+  "first_export_seconds": 1.96482,
+  "idempotent": true,
+  "markdown_note_count": 10001,
+  "node_count": 10000,
+  "passed": true,
+  "rename_export_seconds": 3.234733,
+  "rename_identity_stable": true,
+  "repeat_export_seconds": 2.953188,
+  "schema_version": 2,
+  "user_edit_and_collision_behavior": "covered by tests/unit/test_release_hardening.py"
+}

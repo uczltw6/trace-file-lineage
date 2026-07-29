@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  core:
+    name: Core / ${{ matrix.os }} / Python ${{ matrix.python }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dependency-free core
+        run: python -m pip install . --no-deps
+      - name: Verify installed entry points and dependency contract
+        run: |
+          python -c "import importlib.metadata as m; import lineage_core; requirements=m.requires('trace-file-lineage') or []; assert all('extra ==' in item for item in requirements); print(lineage_core.__version__)"
+          python -m lineage_core doctor --root .
+      - name: Unit and scenario tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+      - name: Cross-platform installed-package smoke test
+        run: python tests/cross_platform_smoke.py
+      - name: Scenario evaluation summary
+        run: python tests/run_scenario_evals.py
+      - name: Installed-skill self-test
+        run: python skills/trace-file-lineage/scripts/self_test.py
+      - name: Validate skill structure
+        run: python tests/validate_skill.py
+
+  optional-documents:
+    name: Optional documents / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install documented PDF extra and deterministic fixture builders
+        run: python -m pip install ".[pdf]" reportlab python-docx
+      - name: Real PDF extraction, media, ranking, and degraded-fallback fixtures
+        run: python -m unittest tests.optional.test_pdf_ocr_integration.PDFRuntimeIntegrationTests -v
+      - name: Cross-platform smoke with optional document dependencies present
+        run: python tests/cross_platform_smoke.py
+
+  optional-ocr:
+    name: Optional local OCR / Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install documented Python extras and fixture builders
+        run: python -m pip install ".[pdf,ocr]" reportlab python-docx
+      - name: Install ephemeral local OCR runtime
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr poppler-utils
+      - name: Real scanned-PDF and PNG OCR fixtures
+        run: python -m unittest tests.optional.test_pdf_ocr_integration.OCRRuntimeIntegrationTests -v
+
+  performance:
+    name: Incremental performance baseline / Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependency-free core
+        run: python -m pip install . --no-deps
+      - name: Build 1k/10k mixed baselines and enforce post-baseline gates
+        run: |
+          python tests/benchmark.py
+          python tests/performance_gates.py
+      - name: Export 10k Obsidian notes twice and verify rename-stable backlinks
+        run: python tests/obsidian_scale.py

@@ -1,0 +1,62 @@
+{
+  "all_passed": true,
+  "scenarios": [
+    {
+      "duration_seconds": 0.049161,
+      "failures": [],
+      "passed": true,
+      "scenario": "lost-research-figure",
+      "tests_run": 1
+    },
+    {
+      "duration_seconds": 0.022617,
+      "failures": [],
+      "passed": true,
+      "scenario": "renamed-docx-pdf",
+      "tests_run": 1
+    },
+    {
+      "duration_seconds": 0.080148,
+      "failures": [],
+      "passed": true,
+      "scenario": "agent-run-150-images",
+      "tests_run": 1
+    },
+    {
+      "duration_seconds": 0.028522,
+      "failures": [],
+      "passed": true,
+      "scenario": "ambiguous-producer",
+      "tests_run": 1
+    },
+    {
+      "duration_seconds": 0.03685,
+      "failures": [],
+      "passed": true,
+      "scenario": "downstream-impact",
+      "tests_run": 1
+    },
+    {
+      "duration_seconds": 0.029257,
+      "failures": [],
+      "passed": true,
+      "scenario": "obsidian-idempotency",
+      "tests_run": 1
+    },
+    {
+      "duration_seconds": 0.017422,
+      "failures": [],
+      "passed": true,
+      "scenario": "windows-unicode",
+      "tests_run": 1
+    },
+    {
+      "duration_seconds": 0.01886,
+      "failures": [],
+      "passed": true,
+      "scenario": "privacy-boundary",
+      "tests_run": 1
+    }
+  ],
+  "schema_version": 2
+}
