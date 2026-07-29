@@ -44,15 +44,26 @@ hook boundary records temporal co-change. The command wrapper can verify that it
 child process changed a particular artifact version, but cannot name an internal
 writer function without deeper instrumentation.
 
-## Quick start
+## 30-second start
 
 Install the dependency-free core into any Python 3.11–3.14 environment:
 
 ```text
 python -m pip install . --no-deps
-python -m lineage_core doctor --root .
-python -m lineage_core scan --root .
+python -m lineage_core explain path/to/artifact.png --root .
+python -m lineage_core open --root .
 ```
+
+`explain` incrementally refreshes the local index, then returns the best-supported
+origin chain, alternatives, evidence, assurance, and missing evidence. `open`
+refreshes the index, writes `.file-lineage/views/explorer.html`, and asks the
+desktop to open it in the default browser. Use `--no-scan` when the index is
+already current and `open --no-launch` in CI or another headless environment.
+
+Run `python -m lineage_core doctor --root .` when you need the detailed format
+and optional-dependency capability matrix.
+
+## Portable invocation
 
 The installed module entry point is the portable default on Windows, macOS, and
 Linux. A source checkout can also invoke the canonical skill script directly:
@@ -61,6 +72,7 @@ Linux. A source checkout can also invoke the canonical skill script directly:
 LINEAGE=skills/trace-file-lineage/scripts/lineage.py
 python3 "$LINEAGE" doctor --root .
 python3 "$LINEAGE" scan --root .
+python3 "$LINEAGE" explain figures/final_panel.png --root . --format markdown
 python3 "$LINEAGE" find "final panel" --root . --type image --thumbnails
 python3 "$LINEAGE" why figures/final_panel.png --root . --format markdown
 python3 "$LINEAGE" search "sample identifier" --root . --source native
@@ -72,6 +84,8 @@ PowerShell uses the same CLI and does not require Bash:
 $Lineage = Join-Path $PWD "skills/trace-file-lineage/scripts/lineage.py"
 py -3 $Lineage doctor --root $PWD
 py -3 $Lineage scan --root $PWD
+py -3 $Lineage explain "figures/final panel.png" --root $PWD --format markdown
+py -3 $Lineage open --root $PWD
 py -3 $Lineage why "figures/final panel.png" --root $PWD --format markdown
 py -3 $Lineage snapshot --root $PWD --output ".file-lineage/before.json"
 py -3 $Lineage record --root $PWD --before ".file-lineage/before.json" --task "Prepare submission"
@@ -87,10 +101,12 @@ the SQLite index is current:
 Find an artifact → explain Why → inspect its Task Receipt → check Stale outputs → review a Safe Reproduction dry-run
 ```
 
-`find` narrows candidates, `why` separates the best supported explanation from
-competitors and missing evidence, `receipt` gives the complete run manifest,
-`stale` distinguishes verified from candidate dependency chains, and
-`reproduce --dry-run` prints a redacted argument array but never launches it.
+`explain` combines the normal incremental scan and `why` query. `find` narrows
+candidates, while `why` queries an already-current index and separates the best
+supported explanation from competitors and missing evidence. `receipt` gives
+the complete run manifest, `stale` distinguishes verified from candidate
+dependency chains, and `reproduce --dry-run` prints a redacted argument array
+but never launches it.
 
 ## Real workflows
 
@@ -122,7 +138,7 @@ verify identity continuity at the rename boundary.
 Question: “Which editable document produced this PDF?”
 
 ```bash
-python3 "$LINEAGE" why submission_final.pdf --root . --format markdown
+python3 "$LINEAGE" explain submission_final.pdf --root . --format markdown
 ```
 
 The document adapter combines normalized text, embedded-media identity, safe
@@ -137,12 +153,23 @@ python3 "$LINEAGE" snapshot --root . --output .file-lineage/before.json
 # Run the agent task.
 python3 "$LINEAGE" record --root . --before .file-lineage/before.json --task "Parameter sweep"
 python3 "$LINEAGE" run-show <run-id> --root . --format markdown
-python3 "$LINEAGE" receipt <run-id> --root . --format markdown
+python3 "$LINEAGE" receipt --root . --format markdown
 ```
 
 All members remain in SQLite and JSON. The default run view groups images by
 captured run, directory, suffix, and normalized filename template, then shows
 3–10 representatives and retains outliers.
+
+For a command that can be wrapped, `run` prints a concise receipt to standard
+error after the child exits while leaving the child's standard output untouched:
+
+```bash
+python3 "$LINEAGE" run --root . --task "Render figures" -- python3 scripts/render.py
+```
+
+Pass `--no-receipt` to suppress the summary. `receipt` without a run ID selects
+the latest finalized recorded run; pass an explicit ID to inspect an older or
+unfinished one.
 
 ### Downstream impact
 
@@ -224,6 +251,8 @@ naming/timestamp heuristics.
 
 ```text
 scan [--full]        incrementally refresh, or force content rehash/re-extraction
+explain FILE         refresh the index and explain one artifact in one command
+open                 refresh, render, and open the local HTML explorer
 rebuild              refresh derived projections while preserving identity/decisions
 find QUERY            fuzzy filename plus indexed-text discovery and filters
 why FILE             rank ancestry and producer candidates
@@ -234,9 +263,9 @@ stale [FILE]         likely outdated outputs
 orphans              artifacts without supported parents
 snapshot / record    explicit task boundaries
 recover              list or recover hook runs left in_progress after a missed Stop
-run -- CMD            safely wrap a local command and preserve its exit code
+run -- CMD            wrap a command, preserve its exit code, and print a concise receipt
 run-show RUN_ID       summarize one run and its clusters
-receipt RUN_ID        complete changed-path manifest and output families
+receipt [RUN_ID]      complete manifest for one run (latest by default)
 reproduce FILE        dry-run-only reproduction plan; never executes
 confirm               persist a user-confirmed causal claim
 reject / undo         persist or reverse claim adjudication
@@ -353,12 +382,14 @@ adapter never launches an MCP server or indexing tool itself.
 ## Local HTML explorer
 
 ```bash
-python3 "$LINEAGE" export --root . --format html
+python3 "$LINEAGE" open --root .
 ```
 
 The static explorer contains the graph locally and needs no server or remote
 service. It provides path search, relation/assurance filtering, and structured
-evidence inspection. Captured and inferred edges are visually distinct.
+evidence inspection. Captured and inferred edges are visually distinct. Use
+`export --format html` when you only want to write the file without refreshing
+the index or launching a browser.
 
 ## Privacy and safety
 
@@ -511,7 +542,8 @@ and [hook reference](https://learn.chatgpt.com/docs/hooks), plus Claude Code's
 [plugin reference](https://code.claude.com/docs/en/plugins-reference), and
 [hooks reference](https://code.claude.com/docs/en/hooks).
 
-No external repository is created or published by this project.
+Source, releases, and issue tracking live at
+[github.com/uczltw6/trace-file-lineage](https://github.com/uczltw6/trace-file-lineage).
 
 ## Development and tests
 

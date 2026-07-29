@@ -26,7 +26,15 @@ arguments as arrays, and never request shell interpolation.
 
 ## Retrospective forensics
 
-Build or refresh the local index:
+For the usual “where did this artifact come from?” question, use the single
+first-run command. It incrementally refreshes the index before explaining:
+
+```sh
+python3 "$LINEAGE" explain path/to/artifact --root . --format markdown
+```
+
+Use `--no-scan` only when the index is already current. Build or refresh the
+local index separately for batch investigation:
 
 ```sh
 python3 "$LINEAGE" scan --root .
@@ -71,6 +79,10 @@ Prefer the command wrapper for a safe, non-interactive local command:
 python3 "$LINEAGE" run --root . --task "Render figures" -- python3 scripts/render.py
 ```
 
+On normal completion, `run` prints a concise changed-file receipt to standard
+error without altering the child's standard output. Use `--no-receipt` to
+suppress it, or `receipt --root .` for the latest finalized complete manifest.
+
 For an agent task or a command that should not be wrapped, use boundaries:
 
 ```sh
@@ -114,9 +126,12 @@ Summarize one run and cluster large output families:
 
 ```sh
 python3 "$LINEAGE" run-show <run-id> --root . --format markdown
-python3 "$LINEAGE" receipt <run-id> --root . --format markdown
+python3 "$LINEAGE" receipt --root . --format markdown
 python3 "$LINEAGE" reproduce path/to/artifact --root . --dry-run --format markdown
 ```
+
+Omitting the receipt run ID selects the latest finalized run; provide an ID to
+inspect an older or unfinished run.
 
 `reproduce` is intentionally dry-run only. It preserves command arguments as an
 array and never launches a process. Persist human adjudication when needed:
@@ -136,9 +151,13 @@ single Mermaid view. Export the complete graph to JSON/SQLite and use clusters
 or the local explorer for large workspaces:
 
 ```sh
-python3 "$LINEAGE" export --root . --format html
+python3 "$LINEAGE" open --root .
 python3 "$LINEAGE" export --root . --format mermaid
 ```
+
+`open` incrementally refreshes, renders the local HTML explorer, and asks the
+desktop to open it. Use `open --no-launch` for headless validation, or
+`export --format html` to render without refreshing or launching.
 
 For Obsidian, require an explicit destination and read
 [references/obsidian.md](references/obsidian.md):

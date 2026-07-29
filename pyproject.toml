@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trace-file-lineage"
-version = "0.5.0"
+version = "0.6.0"
 description = "Agent-independent local-first provenance and artifact navigation"
 requires-python = ">=3.11"
 license = "MIT"

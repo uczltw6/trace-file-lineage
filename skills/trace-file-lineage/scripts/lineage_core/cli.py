@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import sys
+import webbrowser
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,7 @@ from .adapters import AgentRunAdapter, CodeGraphAdapter, DVCAdapter, OpenLineage
 from .capture import pending_captures, record, recover_capture, run_command, write_snapshot
 from .capabilities import capability_matrix, capability_tiers, dependency_status, interoperability_capabilities, platform_capabilities, release_capability_ledger
 from .clustering import build_clusters
-from .config import load_config
+from .config import Config, load_config
 from .evidence import fact, now
 from .model import Edge
 from .query import alternatives, impact, orphans, receipt, reproduce, resolve, run_show, shortest_path, stale, why
@@ -61,6 +62,58 @@ def cmd_scan(args: argparse.Namespace) -> int:
         overview.write_text(render_overview(store.graph()), encoding="utf-8")
         payload = result.to_dict() | {"database": str(config.db_path), "graph": str(graph_path), "overview": str(overview)}
         emit(payload, args.format)
+        return 0
+    finally:
+        store.close()
+
+
+def refresh_index(config: Config, store: Store, args: argparse.Namespace) -> dict[str, Any] | None:
+    """Refresh the index for convenience commands unless explicitly disabled."""
+    if getattr(args, "no_scan", False):
+        return None
+    if getattr(args, "ocr", False):
+        config.ocr_enabled = True
+    return scan(config, store, full=getattr(args, "full", False)).to_dict()
+
+
+def cmd_explain(args: argparse.Namespace) -> int:
+    config, store = open_store(Path(args.root))
+    try:
+        refreshed = refresh_index(config, store, args)
+        result = why(store, args.file, args.min_confidence, args.depth)
+        result["index_refresh"] = refreshed or {"skipped": True}
+        emit(result, args.format)
+        return 0 if result.get("status") != "not-found" else 2
+    finally:
+        store.close()
+
+
+def cmd_open(args: argparse.Namespace) -> int:
+    config, store = open_store(Path(args.root))
+    try:
+        refreshed = refresh_index(config, store, args)
+        destination = (
+            Path(args.destination)
+            if args.destination
+            else config.output_path / "views" / "explorer.html"
+        )
+        rendered = render_html(store.graph(args.min_confidence), destination)
+        launched = False
+        launch_error = None
+        if not args.no_launch:
+            try:
+                launched = bool(webbrowser.open(rendered.resolve().as_uri(), new=2))
+            except (OSError, webbrowser.Error) as exc:
+                launch_error = str(exc)
+        emit(
+            {
+                "status": "ok",
+                "destination": str(rendered),
+                "launched": launched,
+                "launch_error": launch_error,
+                "index_refresh": refreshed or {"skipped": True},
+            }
+        )
         return 0
     finally:
         store.close()
@@ -123,12 +176,33 @@ def cmd_run(args: argparse.Namespace) -> int:
         return 2
     config, store = open_store(Path(args.root))
     try:
+        existing_run_ids = {item["id"] for item in store.runs()}
         metadata = {"agent_platform": args.agent_platform}
         if args.session_ref:
             metadata["session_ref"] = private_reference(args.session_ref, "session")
         if args.handoff_ref:
             metadata["handoff_ref"] = private_reference(args.handoff_ref, "handoff")
-        return run_command(config, store, args.task, command, metadata=metadata)
+        exit_code = run_command(config, store, args.task, command, metadata=metadata)
+        if not args.no_receipt:
+            new_runs = [item for item in store.runs() if item["id"] not in existing_run_ids]
+            if new_runs:
+                latest = new_runs[-1]
+                changes = latest.get("changes", {})
+                counts = {
+                    name: len(changes.get(name, []))
+                    for name in ("created", "modified", "renamed", "deleted")
+                }
+                full_args = [
+                    "lineage", "receipt", latest["id"], "--root", str(config.root)
+                ]
+                print(
+                    "lineage receipt: "
+                    f"status={latest.get('status')} run_id={latest['id']} "
+                    + " ".join(f"{name}={count}" for name, count in counts.items())
+                    + f"; full_args={json.dumps(full_args, ensure_ascii=False)}",
+                    file=sys.stderr,
+                )
+        return exit_code
     finally:
         store.close()
 
@@ -308,7 +382,21 @@ def cmd_find(args: argparse.Namespace) -> int:
 def cmd_receipt(args: argparse.Namespace) -> int:
     _, store = open_store(Path(args.root))
     try:
-        result = receipt(store, args.run_id)
+        run_id = args.run_id
+        if run_id is None:
+            runs = [item for item in store.runs() if item.get("status") != "in_progress"]
+            if not runs:
+                emit(
+                    {
+                        "query": "receipt",
+                        "status": "not-found",
+                        "reason": "no finalized recorded runs",
+                    },
+                    args.format,
+                )
+                return 2
+            run_id = runs[-1]["id"]
+        result = receipt(store, run_id)
         emit(result, args.format)
         return 0 if result["status"] == "ok" else 2
     finally:
@@ -422,7 +510,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="lineage",
         description="Trace file origins, downstream impact, and captured task changes locally.",
-        epilog="Examples: lineage scan --root . | lineage why figures/final.png | lineage run --task 'Render' -- python render.py",
+        epilog="Examples: lineage explain figures/final.png | lineage open | lineage run --task 'Render' -- python render.py",
     )
     sub = parser.add_subparsers(dest="command", required=True)
     scan_parser = sub.add_parser("scan", help="build or incrementally refresh the local index")
@@ -431,6 +519,25 @@ def build_parser() -> argparse.ArgumentParser:
     scan_parser.add_argument("--ocr", action="store_true", help="enable optional local OCR for this scan")
     scan_parser.add_argument("--full", action="store_true", help="rehash and re-extract every in-scope file even when size and mtime are unchanged")
     scan_parser.set_defaults(handler=cmd_scan)
+    explain = sub.add_parser("explain", help="refresh the index and explain one artifact in a single command")
+    explain.add_argument("file")
+    explain.add_argument("--root", default=".")
+    explain.add_argument("--min-confidence", type=float, default=0.30)
+    explain.add_argument("--depth", type=int, default=5)
+    explain.add_argument("--format", choices=["json", "markdown", "mermaid"], default="markdown")
+    explain.add_argument("--no-scan", action="store_true", help="query the current index without refreshing it")
+    explain.add_argument("--full", action="store_true", help="force content rehash/re-extraction before explaining")
+    explain.add_argument("--ocr", action="store_true", help="enable optional local OCR during the refresh")
+    explain.set_defaults(handler=cmd_explain)
+    open_parser = sub.add_parser("open", help="refresh, render, and open the local HTML lineage explorer")
+    open_parser.add_argument("--root", default=".")
+    open_parser.add_argument("--destination")
+    open_parser.add_argument("--min-confidence", type=float, default=0.30)
+    open_parser.add_argument("--no-scan", action="store_true", help="render the current index without refreshing it")
+    open_parser.add_argument("--full", action="store_true", help="force content rehash/re-extraction before rendering")
+    open_parser.add_argument("--ocr", action="store_true", help="enable optional local OCR during the refresh")
+    open_parser.add_argument("--no-launch", action="store_true", help="render the explorer without launching a browser")
+    open_parser.set_defaults(handler=cmd_open)
     rebuild = sub.add_parser("rebuild", help="safely rebuild only .file-lineage/lineage.db")
     rebuild.add_argument("--root", default=".")
     rebuild.add_argument("--format", choices=["json", "markdown"], default="json")
@@ -459,8 +566,8 @@ def build_parser() -> argparse.ArgumentParser:
     run_show_parser.add_argument("--root", default=".")
     run_show_parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
     run_show_parser.set_defaults(handler=cmd_query, query_command="run-show", min_confidence=0.3, depth=5)
-    receipt_parser = sub.add_parser("receipt", help="show the complete change manifest and output families for one run")
-    receipt_parser.add_argument("run_id")
+    receipt_parser = sub.add_parser("receipt", help="show a run manifest; defaults to the latest recorded run")
+    receipt_parser.add_argument("run_id", nargs="?")
     receipt_parser.add_argument("--root", default=".")
     receipt_parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
     receipt_parser.set_defaults(handler=cmd_receipt)
@@ -484,6 +591,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--agent-platform", default="program")
     run.add_argument("--session-ref")
     run.add_argument("--handoff-ref")
+    run.add_argument("--no-receipt", action="store_true", help="do not print the concise post-command receipt")
     run.add_argument("command", nargs=argparse.REMAINDER)
     run.set_defaults(handler=cmd_run)
     recover = sub.add_parser("recover", help="list or explicitly recover hook runs left in_progress after a missed Stop")
