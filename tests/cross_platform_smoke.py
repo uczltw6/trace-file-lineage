@@ -22,7 +22,7 @@ def run_cli(arguments: list[str], *, expected: int = 0) -> subprocess.CompletedP
     completed = subprocess.run(
         [sys.executable, "-m", "lineage_core", *arguments],
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         check=False,
         env=environment,
     )
@@ -162,7 +162,7 @@ def main() -> int:
     else:
         with tempfile.TemporaryDirectory() as temp:
             result = run_smoke(Path(temp))
-    print(json.dumps(result, indent=2, sort_keys=True, ensure_ascii=False))
+    print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
 

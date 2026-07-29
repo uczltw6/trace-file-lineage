@@ -114,7 +114,7 @@ def record(
     run_metadata.setdefault("git_state_after", after.get("git_state"))
     changes = compare(before, after)
     try:
-        snapshot_relative = normalize_relative(before_path.resolve(), config.root)
+        snapshot_relative = normalize_relative(before_path, config.root)
         changes["created"] = [item for item in changes["created"] if item != snapshot_relative]
         changes["modified"] = [item for item in changes["modified"] if item != snapshot_relative]
     except OSError:

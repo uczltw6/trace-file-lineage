@@ -28,6 +28,17 @@ from .platforms import detect_obsidian, open_obsidian
 from .storage import Store
 
 
+def configure_utf8_streams() -> None:
+    """Keep Unicode CLI output portable when Windows uses a legacy code page."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="backslashreplace")
+            except (OSError, ValueError):
+                pass
+
+
 def emit(value: Any, fmt: str = "json") -> None:
     if fmt == "json":
         print(json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False))
@@ -686,6 +697,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    configure_utf8_streams()
     args = build_parser().parse_args(argv)
     try:
         return int(args.handler(args))

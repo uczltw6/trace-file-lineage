@@ -17,10 +17,11 @@ def run_cli(arguments: list[str], *, expected: int = 0) -> subprocess.CompletedP
     environment = os.environ.copy()
     existing = environment.get("PYTHONPATH")
     environment["PYTHONPATH"] = str(SOURCE_ROOT) + (os.pathsep + existing if existing else "")
+    environment["PYTHONIOENCODING"] = "cp1252"
     completed = subprocess.run(
         [sys.executable, "-m", "lineage_core", *arguments],
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         check=False,
         env=environment,
     )

@@ -27,9 +27,9 @@ def _safe_label(value: Any) -> str:
 
 def _atomic_text(path: Path, content: str) -> str:
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(content, encoding="utf-8")
+    temporary.write_text(content, encoding="utf-8", newline="\n")
     temporary.replace(path)
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _evidence_summary(edge: dict[str, Any]) -> str:
