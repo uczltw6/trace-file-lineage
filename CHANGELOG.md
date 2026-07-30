@@ -21,6 +21,20 @@ schema or CLI contracts with migration guidance.
 
 ### Fixed
 
+- **Notebook lineage was failing on most real notebooks.** The adapter parsed each
+  code cell with `ast.parse`, and real notebooks contain IPython syntax that is not
+  valid Python — `%matplotlib inline`, `!pip install`, `%%bash`, `pandas.read_csv?`.
+  One such line made the whole cell raise `SyntaxError`, so every file reference in
+  it was discarded while the adapter still advertised syntax-aware lineage. Measured
+  against jakevdp/PythonDataScienceHandbook: **63% of notebooks** had at least one
+  affected cell, producing 146 warnings. IPython-only lines are now neutralised
+  before parsing, substituting `pass` so that reported `file:line` evidence stays
+  accurate, and cell magics whose body is still Python keep their body. Warnings on
+  that corpus dropped to 2, both of which are genuinely invalid Python the book
+  includes on purpose. Note this fixed correctness and noise rather than coverage:
+  on that corpus none of the affected cells performed file I/O, so no new lineage
+  edges were recovered. See [docs/real-world-validation.md](docs/real-world-validation.md).
+
 - **`find` crashed on nearly every query.** The fuzzy fallback sorted `(ratio, dict)`
   tuples, so any two candidates with an equal similarity ratio made Python compare the
   file dictionaries and raise `TypeError`. Since the fallback triggers whenever exact

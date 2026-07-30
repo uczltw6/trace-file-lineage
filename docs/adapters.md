@@ -11,7 +11,7 @@ same as "we understand the language".
 
 | Format group | Current behavior | Optional dependency |
 |---|---|---|
-| Python and notebooks | Native text plus runtime-validated syntax-aware lineage | none |
+| Python and notebooks | Native text plus runtime-validated syntax-aware lineage. Notebook cells are pre-processed for IPython syntax (`%magic`, `%%cellmagic`, `!shell`, `?help`) before parsing; see [real-world-validation.md](real-world-validation.md) | none |
 | JavaScript/TypeScript | Conservative token/static parsing; not full AST or type-aware | none |
 | Other text/source formats | Native text indexing and search plus conservative literal references | none |
 | DOCX/PPTX/XLSX/ODT/ODP/ODS/EPUB | Structured text, metadata, links, safe embedded-media hashing | none |
