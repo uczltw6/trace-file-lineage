@@ -53,6 +53,12 @@ schema or CLI contracts with migration guidance.
   Use `doctor --format json` for the complete machine-readable ledger.
 - **The README is a fifth of its previous length**, leads with the agent-run scenario,
   and moves detailed capability ledgers into `docs/`.
+- **Compatibility claims now cite a published CI run.** The full 12-cell
+  operating-system and Python matrix passed, along with the real-fixture PDF jobs on all
+  three platforms, the Ubuntu Tesseract OCR job, and the performance gates. The previous
+  "configured but not yet verified" wording is replaced with the measured result; OCR is
+  described as validated on Linux and experimental elsewhere, which is what the evidence
+  supports.
 
 ## [0.5.0] — 2026-07-29
 

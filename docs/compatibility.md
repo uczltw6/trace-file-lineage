@@ -5,15 +5,22 @@ all twelve combinations; see the badge in the README for the current published r
 
 ## Verification status
 
+Every row below is backed by a published CI run, not a local-only claim.
+
 | Surface | Status |
 |---|---|
-| Python 3.11–3.14 × macOS/Linux/Windows | 12-cell CI matrix |
-| macOS / Python 3.14 | Locally runtime-tested during development |
-| PDF extra | Runtime-validated in an isolated venv (pypdf 6.14.2, Pillow 12.3.0, reportlab 5.0.0, python-docx 1.2.0): text, structure, media, competing origins, post-edit, and degraded fallback |
-| PDF without the optional dependency | Degraded literal/metadata fallback runtime-validated |
-| Tesseract OCR | Experimental; contract-tested, with a dedicated Linux CI job for real fixtures |
-| HTML explorer JavaScript | Executed against a DOM stub in CI on every platform via Node |
+| Python 3.11–3.14 × macOS/Linux/Windows | All 12 matrix cells green in CI |
+| Optional documents, real PDF and DOCX fixtures | Green on macOS, Ubuntu, and Windows |
+| PDF extra | Validated against real fixtures built with pypdf, Pillow, reportlab, and python-docx: text, structure, media, competing origins, post-edit, and degraded fallback |
+| PDF without the optional dependency | Degraded literal/metadata fallback validated |
+| Tesseract OCR | Validated on Ubuntu CI against real scanned-PDF and PNG fixtures. Not validated on macOS or Windows, where it stays experimental |
+| HTML explorer JavaScript | Executed under Node against a DOM stub in all 12 core jobs |
+| Incremental performance baseline and gates | Green on Ubuntu |
 | Obsidian exporter | Runtime-tested at 10,000 nodes / 9,999 edges; repeat export and rename-stable backlinks pass |
+
+First fully green run of the complete matrix:
+[run 30524760792](https://github.com/uczltw6/trace-file-lineage/actions/runs/30524760792)
+(17 of 17 jobs, commit `efdca53`).
 
 ## Path handling
 

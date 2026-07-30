@@ -198,8 +198,11 @@ Your numbers depend on filesystem, file types, and content size.
 
 Historical causality can stay genuinely ambiguous without run or Git evidence, and
 the tool says so rather than guessing. JavaScript/TypeScript analysis is intentionally
-shallow, languages beyond Python are text-indexed rather than parsed, and OCR is
-experimental. Full detail: [docs/limitations.md](docs/limitations.md) and
+shallow, and languages beyond Python are text-indexed rather than parsed. OCR is
+validated on Linux and stays experimental on macOS and Windows.
+
+Tested on Python 3.11–3.14 across macOS, Linux, and Windows — all twelve matrix cells
+green. Full detail: [docs/limitations.md](docs/limitations.md) and
 [docs/compatibility.md](docs/compatibility.md).
 
 ## Contributing
