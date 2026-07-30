@@ -51,6 +51,27 @@ JavaScriptCore, and skips cleanly without one. If you change
 Optional document and OCR fixtures are described in
 [docs/compatibility.md](docs/compatibility.md).
 
+### Coverage
+
+The floor is 80%, enforced in CI. Measuring it needs one piece of setup, because
+the CLI tests drive the real entry point as a child process and coverage does not
+follow child processes on its own:
+
+```bash
+python -m pip install coverage
+SITE=$(python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
+echo "import coverage; coverage.process_startup()" > "$SITE/coverage_subprocess.pth"
+
+COVERAGE_PROCESS_START=$PWD/pyproject.toml PYTHONDONTWRITEBYTECODE=1 \
+  python -m coverage run -m unittest discover -s tests -p 'test_*.py'
+python -m coverage combine && python -m coverage report
+```
+
+Without that hook the CLI appears to be around 43% covered when it is really
+above 90%. Some modules stay below the floor because they need a dependency or
+platform this machine may not have: OCR needs Tesseract, image fingerprinting
+needs Pillow, and the download-origin adapters are per-operating-system.
+
 ## Expectations for a pull request
 
 - **Tests first for bug fixes.** Add a test that fails on `main`, then fix it. Include

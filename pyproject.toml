@@ -123,3 +123,18 @@ ignore = [
 # The explorer's JavaScript lives in string constants, so line length there is
 # governed by the JavaScript rather than by Python style.
 "skills/trace-file-lineage/scripts/lineage_core/renderers/explorer_assets.py" = ["E501"]
+
+[tool.coverage.run]
+# CLI tests drive the real entry point in a subprocess, so measurement has to
+# follow child processes or the reported number is meaningless.
+source = ["skills/trace-file-lineage/scripts/lineage_core"]
+parallel = true
+branch = false
+omit = ["*/__main__.py"]
+
+[tool.coverage.report]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+]

@@ -483,13 +483,26 @@ class Store:
         self.connection.execute("UPDATE file_locations SET current=0,last_seen=? WHERE path=?", (seen_at, path))
 
     def ensure_virtual(self, node: Node) -> str:
+        """Return the id of the virtual node for this path, creating it if needed.
+
+        Identity here is the path, not the id: uniqueness is enforced on path, and
+        an import can legitimately present an already-known virtual path under a
+        freshly generated id. Checking only the id made a PROV export/import round
+        trip fail with `UNIQUE constraint failed: files.path`.
+        """
+        path = node.path or node.id
         row = self.connection.execute("SELECT id FROM files WHERE id=?", (node.id,)).fetchone()
-        if not row:
-            self.connection.execute(
-                "INSERT INTO files(id,path,kind,label,metadata_json,deleted) VALUES(?,?,?,?,?,0)",
-                (node.id, node.path or node.id, node.kind, node.label, json.dumps(node.metadata, sort_keys=True)),
-            )
-            self._sync_artifact_projection(node.id, node.path or node.id, node.kind, node.label, None, None, None, node.metadata, None)
+        if row:
+            return node.id
+        existing = self.connection.execute("SELECT id FROM files WHERE path=?", (path,)).fetchone()
+        if existing:
+            # Reuse the established id so incoming edges attach to the same node.
+            return str(existing["id"])
+        self.connection.execute(
+            "INSERT INTO files(id,path,kind,label,metadata_json,deleted) VALUES(?,?,?,?,?,0)",
+            (node.id, path, node.kind, node.label, json.dumps(node.metadata, sort_keys=True)),
+        )
+        self._sync_artifact_projection(node.id, path, node.kind, node.label, None, None, None, node.metadata, None)
         return node.id
 
     def delete_evidence_for_source(self, source_path: str) -> None:

@@ -14,7 +14,7 @@ sys.path.insert(0, str(SOURCE_ROOT))
 
 from lineage_core.config import Config
 from lineage_core.evidence import fact, now
-from lineage_core.model import Edge
+from lineage_core.model import Edge, Node
 from lineage_core.query import impact
 from lineage_core.scanner import scan
 from lineage_core.storage import Store
@@ -101,6 +101,50 @@ class FindFuzzyRankingTests(unittest.TestCase):
 
             self.assertEqual(payload["status"], "ok")
             self.assertIn("figure.svg", json.dumps(payload))
+
+
+class VirtualNodeIdentityTests(unittest.TestCase):
+    """Re-importing a graph must reuse virtual nodes rather than colliding.
+
+    `ensure_virtual` looked a node up by id, but the uniqueness constraint is on
+    path. A round trip through PROV export/import regenerates ids, so the lookup
+    missed and the insert hit `UNIQUE constraint failed: files.path`.
+    """
+
+    def test_the_same_virtual_path_under_a_new_id_is_reused(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config = Config(Path(temp))
+            config.output_path.mkdir(parents=True, exist_ok=True)
+            with Store(config.db_path) as store:
+                first = store.ensure_virtual(
+                    Node(id="run:aaaa", kind="run", label="Render", path="@run/run:aaaa")
+                )
+                # A later import presents the same virtual path under a fresh id.
+                second = store.ensure_virtual(
+                    Node(id="run:bbbb", kind="run", label="Render", path="@run/run:aaaa")
+                )
+                self.assertEqual(second, first, "the existing node should be reused")
+                rows = list(store.connection.execute(
+                    "SELECT id FROM files WHERE path=?", ("@run/run:aaaa",)
+                ))
+                self.assertEqual(len(rows), 1, "the virtual path must not be duplicated")
+
+    def test_an_identical_id_is_still_idempotent(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config = Config(Path(temp))
+            config.output_path.mkdir(parents=True, exist_ok=True)
+            with Store(config.db_path) as store:
+                node = Node(id="run:cccc", kind="run", label="Render", path="@run/run:cccc")
+                self.assertEqual(store.ensure_virtual(node), store.ensure_virtual(node))
+
+    def test_distinct_virtual_paths_stay_distinct(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config = Config(Path(temp))
+            config.output_path.mkdir(parents=True, exist_ok=True)
+            with Store(config.db_path) as store:
+                one = store.ensure_virtual(Node(id="run:1", kind="run", label="A", path="@run/a"))
+                two = store.ensure_virtual(Node(id="run:2", kind="run", label="B", path="@run/b"))
+                self.assertNotEqual(one, two)
 
 
 class ImpactTraversalTests(unittest.TestCase):
