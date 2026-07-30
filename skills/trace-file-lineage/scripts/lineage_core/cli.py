@@ -32,6 +32,8 @@ from .config import Config, load_config
 from .demo import run_demo
 from .evidence import fact, now
 from .external import apply_adapter_result
+from .layout import analyse as analyse_layout
+from .layout import render_layout
 from .model import Edge
 from .normalization import normalize_graph
 from .platforms import detect_obsidian, open_obsidian
@@ -359,6 +361,19 @@ def cmd_import(args: argparse.Namespace) -> int:
         store.close()
 
 
+def cmd_layout(args: argparse.Namespace) -> int:
+    _, store = open_store(Path(args.root))
+    try:
+        payload = analyse_layout(store)
+        if args.format == "json":
+            emit(payload)
+        else:
+            print(render_layout(payload), end="")
+        return 0
+    finally:
+        store.close()
+
+
 def cmd_views(args: argparse.Namespace) -> int:
     if args.list or not args.view:
         print(list_views(), end="")
@@ -667,6 +682,7 @@ SUBCOMMAND_HELP = {
     "disable": "stop requiring per-task lineage records in this project",
     "status": "show whether continuous mode is on and whether an index exists",
     "views": "render a chosen angle on the graph; --list shows every available view",
+    "layout": "report how the workspace is organised, and what looks like drift",
 }
 
 
@@ -852,6 +868,10 @@ def build_parser() -> argparse.ArgumentParser:
     rescore.add_argument("--root", default=".")
     rescore.add_argument("--format", choices=["json"], default="json")
     rescore.set_defaults(handler=cmd_rescore)
+    layout_parser = sub.add_parser("layout", help=SUBCOMMAND_HELP["layout"])
+    layout_parser.add_argument("--root", default=".")
+    layout_parser.add_argument("--format", choices=["markdown", "json"], default="markdown")
+    layout_parser.set_defaults(handler=cmd_layout)
     views_parser = sub.add_parser("views", help=SUBCOMMAND_HELP["views"])
     views_parser.add_argument("--view", help="which view to render; omit with --list to see them all")
     views_parser.add_argument("--list", action="store_true", help="list every available view and exit")

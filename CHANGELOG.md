@@ -80,6 +80,26 @@ schema or CLI contracts with migration guidance.
 
 ### Added
 
+- **Continuous mode.** `lineage enable` writes a required instruction into the
+  project's `CLAUDE.md` and `AGENTS.md` so the agent records a lineage boundary after
+  every task, places new files by the project's existing conventions, and reports
+  assurance instead of presenting a guess as proof. Relying on the agent to recall a
+  skill produces intermittent coverage, which is worse than none because the gaps are
+  invisible. The block is delimited, so enabling is idempotent, `lineage disable`
+  removes exactly it, and the user's own notes are untouched. `lineage status` reports
+  whether it is on. This is an instruction, not enforcement — more reliable than
+  hoping, less reliable than a lifecycle hook.
+- **`lineage views` — eleven named angles** on the same graph: `project-map`,
+  `file-history`, `source-chain`, `pipeline`, `agent-run`, `code-to-image`,
+  `document-export`, `duplicates`, `sweeps`, `timeline`, `orphans`. A single fixed
+  diagram is the wrong answer for a historic project because the useful question
+  differs every time. Each renders as Markdown, JSON, or Mermaid from one payload, and
+  none adds inference beyond what `why` and `impact` already support.
+- **`lineage layout`** reports the conventions a project already follows and the shapes
+  that usually mean drift: single-file directories, names carrying `final`/`v2`/`copy`/a
+  date, very long filenames, deep nesting, crowded directories. Read-only — nothing is
+  moved, renamed, or deleted.
+
 - **`lineage demo`** builds a small sample project, records a real wrapped run, and shows
   the verified answer beside the candidate one. The distinction between proof and
   educated guess is the core of the product and was previously only explained in prose.

@@ -247,6 +247,32 @@ lineage demo                                          # see it work
 python -m unittest discover -s tests -p 'test_*.py'   # run the tests
 ```
 
+## Two ways to use it
+
+**Manual** — ask a question any time, nothing to set up:
+
+```bash
+lineage explain report.pdf     # where did this come from?
+lineage views --list           # pick an angle: project map, one file, a run, duplicates…
+lineage layout                 # how is this project organised, and what looks like drift?
+```
+
+**Continuous** — for a project you are actively working in:
+
+```bash
+lineage enable
+```
+
+That writes a required instruction into the project's `CLAUDE.md` and `AGENTS.md`,
+so the agent records a boundary after **every** task instead of when it happens to
+remember, and places new files by the project's existing conventions. From then on
+new files get `verified` provenance rather than inferred guesses.
+`lineage status` shows whether it is on; `lineage disable` removes exactly that block.
+
+It is an instruction, not an enforcement mechanism — more reliable than hoping the
+agent recalls a skill, less reliable than a lifecycle hook. Details and the full
+view list: [docs/skill.md](docs/skill.md).
+
 ## Authors
 
 [tianyiwei](https://github.com/uczltw6) and [Claudia Chen](https://github.com/ClaudiaChen04) — see [AUTHORS.md](AUTHORS.md).

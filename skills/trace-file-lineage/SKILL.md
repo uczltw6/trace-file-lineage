@@ -29,6 +29,35 @@ Query commands default to Markdown and accept `--format json` when you need to
 parse the result. `doctor` also defaults to a readable report; use
 `doctor --format json` for the complete machine-readable capability ledger.
 
+## Two modes
+
+Manual: answer a question about an existing project. Most answers about files
+created before any capture existed are `candidate`, not `verified`; say so.
+
+Continuous: the user ran `lineage enable`, which wrote a required instruction into
+this project's `CLAUDE.md` and `AGENTS.md`. When that block is present you must
+record a boundary at the end of every task that changed files, and you must place
+new files according to the existing layout. Check with `lineage status`.
+
+Before creating files in an unfamiliar project, read the conventions first:
+
+```sh
+python3 "$LINEAGE" layout --root .
+```
+
+Put outputs where comparable outputs already live. Reuse existing directories
+rather than inventing `output_final_v2/`, `results_new/`, or a directory named
+after today's date. Keep names short; when an output supersedes an earlier one,
+reuse the same path so the history is a version chain rather than near-duplicates.
+
+To show the user a graph, let them choose the angle rather than always rendering
+the same diagram:
+
+```sh
+python3 "$LINEAGE" views --list
+python3 "$LINEAGE" views --view source-chain --file report.pdf --root . --format mermaid
+```
+
 ## Retrospective forensics
 
 For the usual “where did this artifact come from?” question, use the single
