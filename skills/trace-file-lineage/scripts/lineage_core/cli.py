@@ -38,9 +38,19 @@ from .platforms import detect_obsidian, open_obsidian
 from .privacy import private_reference
 from .prov import export_prov_jsonld, load_prov_jsonld
 from .query import alternatives, impact, orphans, receipt, reproduce, resolve, run_show, shortest_path, stale, why
-from .renderers import export_obsidian, render_doctor, render_html, render_markdown, render_mermaid, render_overview
+from .renderers import (
+    export_obsidian,
+    render_doctor,
+    render_html,
+    render_markdown,
+    render_mermaid,
+    render_overview,
+    render_view_markdown,
+    render_view_mermaid,
+)
 from .scanner import export_graph, scan
 from .storage import Store
+from .views import VIEWS, build_view, list_views
 
 
 def configure_utf8_streams() -> None:
@@ -349,6 +359,41 @@ def cmd_import(args: argparse.Namespace) -> int:
         store.close()
 
 
+def cmd_views(args: argparse.Namespace) -> int:
+    if args.list or not args.view:
+        print(list_views(), end="")
+        return 0
+    if args.view not in VIEWS:
+        print(
+            f"lineage: unknown view {args.view!r}. Available: {', '.join(VIEWS)}",
+            file=sys.stderr,
+        )
+        return 2
+    spec = VIEWS[args.view]
+    if spec.needs_file and not args.file:
+        print(f"lineage: view {args.view!r} needs --file PATH", file=sys.stderr)
+        return 2
+
+    _, store = open_store(Path(args.root))
+    try:
+        options = {
+            "file": args.file,
+            "run": args.run,
+            "min_confidence": args.min_confidence,
+            "depth": args.depth,
+        }
+        payload = build_view(store, args.view, options)
+        if args.format == "json":
+            emit(payload)
+        elif args.format == "mermaid":
+            print(render_view_mermaid(payload), end="")
+        else:
+            print(render_view_markdown(payload), end="")
+        return 0 if payload.get("status") != "not-found" else 2
+    finally:
+        store.close()
+
+
 def cmd_enable(args: argparse.Namespace) -> int:
     payload = activation_enable(Path(args.root).expanduser().resolve())
     if args.format == "json":
@@ -621,6 +666,7 @@ SUBCOMMAND_HELP = {
     "enable": "require the agent to record lineage after every task in this project",
     "disable": "stop requiring per-task lineage records in this project",
     "status": "show whether continuous mode is on and whether an index exists",
+    "views": "render a chosen angle on the graph; --list shows every available view",
 }
 
 
@@ -632,6 +678,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Start here:\n"
             "  lineage demo            build a sample project and trace it\n"
             "  lineage enable          make the agent record every task from now on\n"
+            "  lineage views --list    pick a view: project map, one file, a run, duplicates…\n"
             "  lineage explain FILE    where did this artifact come from?\n"
             "  lineage open            browse the whole graph in a local HTML explorer\n"
             "  lineage run -- CMD      record what a command changed\n"
@@ -805,11 +852,21 @@ def build_parser() -> argparse.ArgumentParser:
     rescore.add_argument("--root", default=".")
     rescore.add_argument("--format", choices=["json"], default="json")
     rescore.set_defaults(handler=cmd_rescore)
-    for name, handler in (("enable", cmd_enable), ("disable", cmd_disable), ("status", cmd_status)):
+    views_parser = sub.add_parser("views", help=SUBCOMMAND_HELP["views"])
+    views_parser.add_argument("--view", help="which view to render; omit with --list to see them all")
+    views_parser.add_argument("--list", action="store_true", help="list every available view and exit")
+    views_parser.add_argument("--file", help="target file, for views that focus on one artifact")
+    views_parser.add_argument("--run", help="run id, for the agent-run view")
+    views_parser.add_argument("--root", default=".")
+    views_parser.add_argument("--min-confidence", type=float, default=0.30)
+    views_parser.add_argument("--depth", type=int, default=5)
+    views_parser.add_argument("--format", choices=["markdown", "json", "mermaid"], default="markdown")
+    views_parser.set_defaults(handler=cmd_views)
+    for name, handler_fn in (("enable", cmd_enable), ("disable", cmd_disable), ("status", cmd_status)):
         child = sub.add_parser(name, help=SUBCOMMAND_HELP[name])
         child.add_argument("--root", default=".")
         child.add_argument("--format", choices=["markdown", "json"], default="markdown")
-        child.set_defaults(handler=handler)
+        child.set_defaults(handler=handler_fn)
     demo = sub.add_parser("demo", help=SUBCOMMAND_HELP["demo"])
     demo.add_argument("--path", default="./lineage-demo", help="where to build the demo project")
     demo.add_argument("--force", action="store_true", help="use the directory even if it is not empty")
