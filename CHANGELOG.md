@@ -7,6 +7,18 @@ schema or CLI contracts with migration guidance.
 
 ## [0.7.0] — unreleased
 
+### Security
+
+- **XML inside documents could drive memory exhaustion.** ElementTree expands internal
+  entities, and this tool parses XML out of untrusted `.docx`, `.xlsx`, and `.odt`
+  archives. A 698-byte nested-entity payload inside an otherwise valid archive expanded
+  to roughly 10⁹ characters. The existing archive limits did not stop it, because they
+  bound the compressed bytes read rather than what those bytes expand to. OOXML and
+  OpenDocument both forbid a DTD in their parts, so a document type declaration is now
+  rejected before parsing, with a warning naming the part. External entities were already
+  refused, so this was resource exhaustion rather than disclosure. The fix keeps the core
+  dependency-free instead of adding `defusedxml`.
+
 ### Fixed
 
 - **`find` crashed on nearly every query.** The fuzzy fallback sorted `(ratio, dict)`
@@ -17,7 +29,27 @@ schema or CLI contracts with migration guidance.
 - **`impact` reported the queried file inside its own downstream set** and listed some
   downstream artifacts more than once. The traversal appended every edge before
   consulting its visited set. Each downstream artifact is now reported once, at its
-  shortest supported depth, via its best-supported edge.
+  shortest supported depth.
+- **`impact` let queue order decide the answer.** After the deduplication above, the
+  edge that happened to arrive first was kept, so a parent with a strong first hop and a
+  weak final edge could mask another parent's verified path to the same artifact.
+  Competing edges are now ranked, with a verified causal event outranking any score.
+- **Re-importing this tool's own PROV export failed** with `UNIQUE constraint failed:
+  files.path` whenever the workspace had a recorded run. `ensure_virtual` resolved nodes
+  by id while uniqueness is enforced on path, and a round trip regenerates ids. It now
+  resolves by path and reuses the established id, so incoming edges stay attached to the
+  right node.
+- **An unexpected bug surfaced as a raw Python traceback.** `main` caught four exception
+  types; the `find` crash was a `TypeError`, which is precisely why it looked so
+  alarming. Unhandled errors now report the error, point at the issue tracker, and exit
+  70 so they are distinguishable from handled failures. `LINEAGE_TRACEBACK=1` restores
+  the full traceback.
+- **The explorer drew the entire graph at once**, which for this repository is 318 nodes
+  and 554 edges: an unreadable hairball, and against the project's own guidance.
+  Selecting a node now narrows the view to its neighbourhood, with a hop selector, a
+  toggle to see everything, and Escape to clear. One node at a single hop draws 4 nodes
+  instead of 318.
+- **`lineage --version` did not exist.**
 
 ### Added
 
@@ -52,13 +84,30 @@ schema or CLI contracts with migration guidance.
   use something else or nothing at all.
 - **A social preview image** in `docs/assets/`, with conversion instructions, so
   links to the repository render with a card instead of a blank box.
+- **Lint enforced in CI.** ruff was configured but never ran, and reported 103 findings.
+  Rules that merely disagree with this project's design are disabled with the reason
+  recorded, so a finding now means something. CI also fails on a `# noqa` carrying no
+  explanation, which immediately caught two of the repository's own.
+- **A coverage floor of 80%, enforced in CI.** The previous reading of 72% was measuring
+  the wrong thing: the CLI tests drive the real entry point as a child process, and
+  coverage does not follow child processes without a startup hook, so `cli.py` appeared
+  43% covered while being thoroughly exercised. With subprocess measurement configured
+  the true figure is 83%, with `cli.py` at 92%.
+- **End-to-end tests for every subcommand** in both output formats, which is what turned
+  up the PROV import failure above.
 
 ### Changed
 
 - **`doctor` now prints a readable report by default.** It previously emitted raw JSON.
   Use `doctor --format json` for the complete machine-readable ledger.
 - **The README is a fifth of its previous length**, leads with the agent-run scenario,
-  and moves detailed capability ledgers into `docs/`.
+  and moves detailed capability ledgers into `docs/`. It was then rewritten again for a
+  general reader: the opening asks the question a visitor actually arrives with, the five
+  assurance levels are explained in plain sentences, and formats are described by what
+  you get rather than by parser tier.
+- **`storage/sqlite_store.py` was 1026 lines**, past this project's own 800-line ceiling.
+  The DDL and the two connection-only migration helpers moved to `storage/schema.py`,
+  leaving 777. Pure extraction, no behaviour change.
 - **Compatibility claims now cite a published CI run.** The full 12-cell
   operating-system and Python matrix passed, along with the real-fixture PDF jobs on all
   three platforms, the Ubuntu Tesseract OCR job, and the performance gates. The previous
