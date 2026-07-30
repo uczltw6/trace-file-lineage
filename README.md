@@ -1,214 +1,257 @@
 # Trace File Lineage
 
-**Your agent just wrote 150 files. Which one came from where?**
+**"Where did this file come from?"**
+
+You have a chart, a report, a spreadsheet, a dataset. You made it three weeks ago,
+or your AI assistant made it ten minutes ago along with 149 others. Now you need to
+know which script, which notebook, which input file, or which command actually
+produced it.
+
+Trace File Lineage answers that question by reading the files you already have. No
+server to run, no account to create, no API key, and nothing you needed to set up
+beforehand.
 
 [![CI](https://github.com/uczltw6/trace-file-lineage/actions/workflows/ci.yml/badge.svg)](https://github.com/uczltw6/trace-file-lineage/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/trace-file-lineage)](https://pypi.org/project/trace-file-lineage/)
-[![Python](https://img.shields.io/pypi/pyversions/trace-file-lineage)](https://pypi.org/project/trace-file-lineage/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%20%E2%80%93%203.14-blue)](https://www.python.org/)
 
-Trace File Lineage answers "where did this file come from?" for local workspaces —
-without a server, a vendor API key, or any prior instrumentation. It reads the code,
-documents, images, Git history, and command runs you already have, builds a local
-evidence graph, and ranks the likely ancestry while keeping the alternatives.
+---
+
+## See it work
 
 ```bash
-pip install trace-file-lineage
 lineage explain figures/final_panel.svg
 ```
 
 ```text
-Status: ok
-Conclusion: Verified: @run/run:d58aecbc produced this artifact version.
+Conclusion: Verified: @run/run:02f95fa9 produced this artifact version.
 
 Target: figures/final_panel.svg
 
-## Candidate 1: @run/run:d58aecbc
-- Relation: was_generated_by    Assurance: verified    Mode: captured
-- Evidence: task-boundary-diff
+Candidate 1: @run/run:02f95fa9
+  Relation: was_generated_by    Assurance: verified    Mode: captured
+  Evidence: task-boundary-diff
 
-## Candidate 2: analysis/plot.py
-- Relation: can_generate        Assurance: candidate   Mode: static
-- Evidence: static-callsite at analysis/plot.py:6
+Candidate 2: analysis/plot.py
+  Relation: can_generate        Assurance: candidate   Mode: static
+  Evidence: static-callsite at analysis/plot.py:6
 ```
 
-The key idea: **captured facts and historical guesses never get mixed.** A wrapped
-command run is `verified`. A static call site is a `candidate`. Matching timestamps
-are a `weak-signal` and never get promoted, no matter how many of them pile up.
+Read that as two separate statements:
 
-## Why this exists
+- **Answer 1 is proof.** A command was recorded while it ran, and this file changed
+  during it. That is why it says `verified`.
+- **Answer 2 is a good guess.** Line 6 of `plot.py` contains code that writes to this
+  exact path. Very likely the culprit — but nobody watched it happen, so it says
+  `candidate`, not `verified`.
 
-Agents and scripts produce files faster than anyone can track them. Three weeks later
-you have a PNG, a report, or a dataset and no idea which script, notebook, config, or
-agent task made it. Git tracks commits, not the causal path from input to artifact —
-and it says nothing about the files you never committed.
+**That distinction is the whole point of this tool.** Plenty of things can hint at where
+a file came from: a matching name, a similar timestamp, a line of code that mentions it.
+None of those are proof, and Trace File Lineage never quietly upgrades them into proof.
+It tells you what it knows, what it suspects, and what it cannot tell you.
 
-- **Trace an artifact back** to the code, notebook, dataset, config, or document behind it.
-- **See downstream impact** before you change an input.
-- **Summarize an agent run** that scattered hundreds of files, grouped instead of drawn as hundreds of equal nodes.
-- **Record future runs** so the next question has a verified answer instead of a guess.
+---
 
-This is not Git, a scheduler, or a file organizer. It never moves or modifies your source files.
+## Why you might want this
 
-## Try it in 30 seconds
+**Git tracks your commits. It does not track where your files came from.** It cannot
+tell you which of four notebooks produced a PNG, and it knows nothing at all about the
+files you never committed.
+
+Four things people use this for:
+
+| | |
+|---|---|
+| **Trace a file backwards** | Find the code, data, notebook, or document behind an artifact you no longer remember making. |
+| **Look forwards before you break something** | See what depends on an input file *before* you change it. |
+| **Make sense of an AI agent's output** | When an assistant writes 150 files in one go, get a grouped summary instead of 150 mystery files. |
+| **Record things properly from now on** | Wrap a command once, and next time the answer is proof instead of a guess. |
+
+It is not a replacement for Git, not a build system, and not a file organizer.
+**It never moves, renames, edits, or deletes your files.**
+
+---
+
+## Getting started
+
+Requires Python 3.11 or newer. Nothing else — no other packages needed.
 
 ```bash
 pip install trace-file-lineage
+```
 
-# Retrospective: explain a file that already exists.
-lineage explain path/to/artifact.png
+> Not on PyPI yet — the first release is being prepared. Until then:
+> `pip install git+https://github.com/uczltw6/trace-file-lineage`
 
-# Prospective: record what a command changes, and keep its exit code.
-lineage run --task "Render figures" -- python analysis/plot.py
+Then, in any project folder:
 
-# What breaks if I change this input?
-lineage impact data/raw.csv
+```bash
+# "Where did this file come from?"
+lineage explain path/to/your/file.png
 
-# Browse the whole graph in a local, offline HTML explorer.
+# "What would I break if I changed this?"
+lineage impact data/input.csv
+
+# Run something and record what it changed, so next time you get proof
+lineage run --task "Build the report" -- python make_report.py
+
+# Look at everything at once, in your browser
 lineage open
 ```
 
-`lineage explain` refreshes the incremental index and answers in one command.
-No config file, no daemon, no account. The index lives in `.file-lineage/`;
-delete that directory and nothing else changes.
+That is genuinely it. There is no configuration file to write and no setup step. The
+first command builds an index automatically, and later commands reuse it. Everything is
+stored in a single folder called `.file-lineage/` — delete that folder and nothing else
+about your project changes.
 
-## The graph
+Stuck? `lineage --help` lists everything, and `lineage doctor` tells you what your
+machine can and cannot read.
 
-`lineage open` writes a self-contained HTML explorer — a force-directed graph with
-search, assurance filtering, and per-edge evidence. Captured relationships are solid;
-inferred ones are dashed. No server, no CDN, no network request.
+---
 
-`lineage export --format mermaid` gives you the same graph as text. This is the real
-output for the four-file demo above:
+## Seeing the whole picture
+
+`lineage open` builds an interactive map in your browser — drag it around, zoom in,
+click any file to see what's known about it. It's a single self-contained page that
+works offline and never sends anything anywhere.
+
+You can also get the same map as a diagram with `lineage export --format mermaid`. Here
+is the example above, with the relationship labels written out in plain words:
 
 ```mermaid
 flowchart LR
-    n0["@run/run:d58aecbc"]
+    n0["recorded run"]
     n1["figures/final_panel.svg"]
-    n0 ==>|"was_generated_by · verified"| n1
+    n0 ==>|"proved it made this"| n1
     n2["analysis/plot.py"]
-    n2 -.->|"can_generate · candidate"| n1
+    n2 -.->|"probably made this"| n1
     n3["data/raw.csv"]
-    n3 -.->|"declares_read · candidate"| n2
+    n3 -.->|"probably read by"| n2
 ```
 
-Thick solid arrows are captured; dashed arrows are inferred.
+The tool's own output uses its exact vocabulary in place of those phrases —
+`was_generated_by · verified`, `can_generate · candidate`, `declares_read · candidate`.
 
-## Assurance levels
+**Thick solid arrows are proof. Thin dashed arrows are educated guesses.** That rule
+holds everywhere — in the browser view, in diagrams, and in the text output.
 
-Every claim carries one of these, and the CLI always tells you which:
+---
 
-| Assurance | What it means |
+## How sure is it, really?
+
+Every answer comes with one of five labels, and the tool always shows you which:
+
+| Label | In plain words |
 |---|---|
-| `verified` | A wrapped run, trusted imported provenance, or your own confirmation supports this |
-| `strong-candidate` | Strong evidence, but no verified causal event |
-| `candidate` | Useful circumstantial support |
-| `weak-signal` | Limited support; treat as a lead |
-| `insufficient` | Do not present this as an answer |
+| `verified` | We watched this happen. This is proof. |
+| `strong-candidate` | Strong evidence, but nobody watched it happen. |
+| `candidate` | A reasonable guess worth checking. |
+| `weak-signal` | A faint hint. Treat it as a lead, nothing more. |
+| `insufficient` | We genuinely don't know, and won't pretend otherwise. |
 
-Evidence priority: your confirmation → captured runtime → trusted imported provenance →
-declarations → static code → content and structure → naming and timestamps. Correlated
-signals are not double-counted, and an actively rejected claim cannot be revived by
-automatic inference.
+Stronger evidence always wins over weaker evidence, and — importantly — **piling up
+weak hints never adds up to proof.** A hundred files with similar names and similar
+timestamps still produce a guess, not an answer.
 
-**Inference can be wrong.** Check the assurance, evidence, and competing candidates
-before acting on an answer.
+**Guesses can be wrong.** Look at the label and the evidence before you act on an
+answer. If the tool doesn't know, it says so instead of picking something plausible.
 
-## Commands
-
-```text
-explain FILE        refresh the index and explain one artifact          ← start here
-open                render and open the local HTML graph explorer
-run -- CMD          wrap a command and record what it changed
-impact FILE         what a change to this input would affect
-why FILE            rank producer candidates against the current index
-find QUERY          fuzzy filename plus indexed-text discovery
-stale [FILE]        outputs likely outdated relative to their inputs
-receipt [RUN_ID]    complete manifest for a recorded run
-doctor              versions, optional dependencies, format coverage
-```
-
-Also available: `scan`, `rebuild`, `alternatives`, `path`, `orphans`, `run-show`,
-`snapshot`/`record`, `recover`, `reproduce` (dry-run only, never executes),
-`confirm`/`reject`/`undo`/`rescore`, `search`, `export`, `import`.
-Run `lineage --help` or see [docs/cli.md](docs/cli.md).
+---
 
 ## What it can read
 
-The core has **zero dependencies**. Everything below works with a plain Python 3.11+ install:
+Everything in this list works with a plain Python install, no extra packages:
 
-- **Python and notebooks** — syntax-aware lineage from the AST, including common
-  Pandas, NumPy, Matplotlib, PIL, and `pathlib` file I/O patterns.
-- **JavaScript/TypeScript** — a deliberately conservative token/static parser for
-  literal imports and `fs` calls. Not a full AST or type-aware engine.
-- **~50 more text and source formats** — indexed and searchable, with conservative
-  literal path references. Not language-level analysis.
-- **DOCX, PPTX, XLSX, ODT, ODP, ODS, EPUB** — text, structure, metadata, links, and
-  embedded-media hashes.
-- **Images** — PNG/JPEG/TIFF/WebP metadata and fingerprints.
-- **Git** — rename evidence.
+- **Python files and Jupyter notebooks** — read properly, by parsing the actual code.
+  This is the deepest level of understanding available.
+- **JavaScript and TypeScript** — read cautiously. Straightforward cases only, not a
+  full understanding of the language.
+- **About 50 other text and code formats** — searchable, and file paths mentioned inside
+  them get picked up.
+- **Word, PowerPoint, Excel, OpenDocument, EPUB** — text, structure, and embedded images.
+- **PNG, JPEG, TIFF, WebP** — image details and fingerprints.
+- **Git history** — to follow files that were renamed.
 
-Optional extras: `pip install 'trace-file-lineage[pdf]'` adds PDF text and embedded-media
-extraction; a local Tesseract install adds OCR. Missing optional pieces degrade to
-metadata-only with an explicit warning — they never fail a scan.
-Run `lineage doctor` for the exact matrix on your machine.
+Optional add-ons: `pip install 'trace-file-lineage[pdf]'` for reading PDFs, and a local
+Tesseract install for reading text inside scanned images. If something optional is
+missing, that file is still indexed with a clear note — a scan never fails because of it.
 
-Interoperates with W3C PROV (import and export), DVC, OpenLineage, local code-graph
-JSON, and Obsidian export. None of them is required. See [docs/adapters.md](docs/adapters.md).
+It can also exchange data with W3C PROV, DVC, and OpenLineage, and export to Obsidian.
+None of that is required, and you can ignore all of it.
+Details: [docs/adapters.md](docs/adapters.md).
 
-## Privacy
+---
 
-- Analysis is local. No file contents leave your machine.
-- The core imports no OpenAI or Anthropic SDK and needs no API key.
-- Scanning **never executes** your project code.
-- Secrets, credential stores, dependencies, and caches are excluded by default.
-- External symlinks are not followed; ZIP-based documents enforce expansion limits.
-- Run records store a safe summary and redacted commands — never prompts,
-  conversations, transcripts, or environment variables.
+## Your files stay yours
 
-## Use it from an agent
+- **Everything happens on your machine.** Nothing is uploaded, ever.
+- **No AI service is involved.** No OpenAI or Anthropic key, no cloud calls.
+- **Your code is never executed.** Python files are read and analysed, never run.
+- Passwords, keys, and `.env` files are skipped automatically.
+- Recorded commands have things that look like passwords stripped out.
+- When your AI assistant's activity is recorded, only a short summary and the list of
+  changed files is kept — never your conversations or prompts.
 
-One canonical [Agent Skills](https://developers.openai.com/codex/skills)-compatible
-skill lives at `skills/trace-file-lineage/SKILL.md`. Claude Code and Codex packages are
-thin launchers around the same engine.
+One thing worth knowing: the `.file-lineage/` folder contains text pulled out of your
+files, so treat it like your project itself. It is excluded from Git automatically.
+Full detail: [SECURITY.md](SECURITY.md).
+
+---
+
+## Using it with an AI coding assistant
+
+Works with Claude Code and Codex, so you can just ask your assistant "where did this
+file come from?" and it will use this tool to find out.
 
 ```bash
 claude --plugin-dir .                                     # Claude Code
+
 ln -s "$PWD/skills/trace-file-lineage" \
       "$HOME/.agents/skills/trace-file-lineage"           # Codex
 ```
 
-Optional lifecycle hooks record a run boundary per turn. They require host trust,
-never block your work, and fail open. See [docs/install.md](docs/install.md).
+Setup details and other hosts: [docs/install.md](docs/install.md).
 
-## Performance
+---
 
-Measured by `tests/benchmark.py` on macOS with Python 3.14 and standard-library adapters:
+## Speed
 
-| Workspace | Cold scan | No change | One file changed | Query p95 |
-|---:|---:|---:|---:|---:|
-| 1,000 files | 3.4 s | 0.12 s | 0.12 s | 0.8 ms |
-| 10,000 files | 43.5 s | 1.08 s | 1.06 s | 6.7 ms |
+Measured on macOS with Python 3.14, and reproducible with `tests/benchmark.py`:
 
-Your numbers depend on filesystem, file types, and content size.
+| Project size | First scan | Checking again | After one file changed |
+|---:|---:|---:|---:|
+| 1,000 files | 3.4 seconds | 0.1 seconds | 0.1 seconds |
+| 10,000 files | 43 seconds | 1 second | 1 second |
 
-## Status and limits
+The first scan reads everything. After that it only looks at what changed, so day-to-day
+use feels instant. Individual questions are answered in milliseconds.
 
-**Public alpha.** The API and CLI may still change; releases follow SemVer.
+---
 
-Historical causality can stay genuinely ambiguous without run or Git evidence, and
-the tool says so rather than guessing. JavaScript/TypeScript analysis is intentionally
-shallow, and languages beyond Python are text-indexed rather than parsed. OCR is
-validated on Linux and stays experimental on macOS and Windows.
+## Honest limitations
 
-Tested on Python 3.11–3.14 across macOS, Linux, and Windows — all twelve matrix cells
-green. Full detail: [docs/limitations.md](docs/limitations.md) and
+**This is an early release (0.7.0).** It works, it is tested, and commands may still
+change as it improves.
+
+- **Sometimes there is no answer to find.** If a file was created without any record and
+  left no trace, the tool will tell you it doesn't know. That is the correct answer, not
+  a failure.
+- **Python is understood best.** JavaScript and TypeScript are handled cautiously, and
+  other languages are searched rather than truly understood.
+- **Reading text inside scanned images** is tested on Linux and still experimental on
+  macOS and Windows.
+
+Tested on Python 3.11 through 3.14 across macOS, Linux, and Windows — all twelve
+combinations passing. More: [docs/limitations.md](docs/limitations.md) and
 [docs/compatibility.md](docs/compatibility.md).
 
-## Contributing
+---
 
-Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
-Security reports go through [SECURITY.md](SECURITY.md), not public issues.
+## Help out
+
+Bug reports and pull requests are welcome, including from first-time contributors —
+[CONTRIBUTING.md](CONTRIBUTING.md) explains the layout and how to run the tests.
+Found a security problem? Please report it privately: [SECURITY.md](SECURITY.md).
 
 ```bash
 python -m unittest discover -s tests -p 'test_*.py'
@@ -216,4 +259,4 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT — use it for anything. See [LICENSE](LICENSE).
