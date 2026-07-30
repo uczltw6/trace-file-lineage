@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import json
 import sqlite3
 import uuid
@@ -10,6 +11,8 @@ from typing import Any, Iterator
 from .. import SCHEMA_VERSION
 from ..model import Edge, Evidence, Node
 from ..scoring import aggregate
+
+FUZZY_MATCH_MINIMUM_RATIO = 0.35
 
 
 DDL = """
@@ -971,18 +974,21 @@ class Store:
         params.extend([needle, needle, max(limit * 3, limit)])
         rows = [self._file_dict(row) for row in self.connection.execute(sql, tuple(params))]
         if len(rows) < limit and query:
-            import difflib
             candidates = self.files(include_deleted=status == "deleted")
             present = {item["id"] for item in rows}
-            fuzzy = sorted(
+            needle_name = query.casefold()
+            scored = [
                 (
-                    difflib.SequenceMatcher(None, query.casefold(), Path(item["path"]).name.casefold()).ratio(),
+                    difflib.SequenceMatcher(None, needle_name, Path(item["path"]).name.casefold()).ratio(),
                     item,
                 )
                 for item in candidates
                 if item["id"] not in present and (not kind or item["kind"] == kind)
-            )
-            rows.extend(item for ratio, item in reversed(fuzzy) if ratio >= 0.35)
+            ]
+            # Sort on the ratio alone; tied ratios must never fall through to
+            # comparing the file dictionaries, and path keeps ordering stable.
+            scored.sort(key=lambda pair: (-pair[0], pair[1]["path"]))
+            rows.extend(item for ratio, item in scored if ratio >= FUZZY_MATCH_MINIMUM_RATIO)
         return rows[:limit]
 
     def graph(self, minimum: float = 0.0) -> dict[str, Any]:

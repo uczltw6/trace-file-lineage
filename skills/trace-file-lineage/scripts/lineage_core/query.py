@@ -122,13 +122,18 @@ def impact(store: Store, path: str, minimum: float = 0.30, depth: int = 5) -> di
         current, level = queue.popleft()
         if level >= depth:
             continue
+        # store.outgoing is ordered by descending score, so the first edge that
+        # reaches a target is its best-supported one. Reporting only newly seen
+        # targets keeps each downstream artifact at its shortest depth and stops
+        # the queried file reappearing inside its own downstream set.
         for edge in store.outgoing(current, minimum):
+            if edge["target_id"] in seen:
+                continue
+            seen.add(edge["target_id"])
             decorated = _decorate(store, edge)
             decorated["depth"] = level + 1
             (direct if level == 0 else indirect).append(decorated)
-            if edge["target_id"] not in seen:
-                seen.add(edge["target_id"])
-                queue.append((edge["target_id"], level + 1))
+            queue.append((edge["target_id"], level + 1))
     return {"query": "impact", "source": source, "status": "ok", "direct": direct, "indirect": indirect}
 
 
