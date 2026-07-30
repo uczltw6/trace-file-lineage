@@ -109,6 +109,17 @@ def render_html(graph: dict[str, Any], destination: Path, edge_limit: int = DEFA
       <option value="1">Verified only</option>
     </select>
   </label>
+  <label title="Show only what surrounds the selected node">
+    <input id="focus" type="checkbox" checked> Focus on selection
+  </label>
+  <label>Hops
+    <select id="depth">
+      <option value="1">1</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+    </select>
+  </label>
   <button id="reset" type="button">Reset view</button>
   <button id="toggle-table" type="button" aria-pressed="false">Table view</button>
 </header>
@@ -123,7 +134,8 @@ def render_html(graph: dict[str, Any], destination: Path, edge_limit: int = DEFA
     <div id="legend">
       <div><span class="swatch captured"></span> captured relationship</div>
       <div><span class="swatch"></span> inferred relationship</div>
-      <div>drag to pan · scroll to zoom · click a node</div>
+      <div>drag to pan · scroll to zoom</div>
+      <div>click a node to focus it · Esc to show everything</div>
     </div>
   </div>
   <div id="table-view">

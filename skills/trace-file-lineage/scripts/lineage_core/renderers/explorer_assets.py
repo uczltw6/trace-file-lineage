@@ -79,6 +79,7 @@ svg.dragging { cursor: grabbing; }
 .edge { stroke: var(--inferred); stroke-width: 1.1; stroke-dasharray: 4 3; fill: none; }
 .edge.captured { stroke: var(--captured); stroke-width: 1.8; stroke-dasharray: none; }
 .edge.dim { stroke-opacity: .12; }
+.edge.hidden, .node.hidden { display: none; }
 .node circle { stroke: var(--panel); stroke-width: 1.5; cursor: pointer; }
 .node text {
   font-size: 10px;
@@ -189,6 +190,8 @@ const status = document.getElementById('status');
 const searchBox = document.getElementById('search');
 const relationBox = document.getElementById('relation');
 const assuranceBox = document.getElementById('assurance');
+const focusBox = document.getElementById('focus');
+const depthBox = document.getElementById('depth');
 
 [...new Set(edges.map(e => e.relation))].sort()
   .forEach(v => relationBox.add(new Option(v, v)));
@@ -400,6 +403,28 @@ function evidenceHtml(edge) {
   }).join('');
   return items || '<p>No rendered evidence.</p>';
 }
+/* Neighbourhood within `depth` hops of `node`, following edges in both
+   directions. A whole-graph force layout of a few hundred connected files is an
+   unreadable hairball, so selecting a node narrows the view to what surrounds
+   it. Returns null when focus is off, meaning "show everything". */
+function neighbourhood(node, depth) {
+  if (!node) return null;
+  const included = new Set([node]);
+  for (let hop = 0; hop < depth; hop += 1) {
+    // Collect this hop's additions before merging them. Adding to `included`
+    // mid-pass would let a single hop walk a whole chain whenever the edges
+    // happen to be stored in path order, making the hop count meaningless.
+    const additions = [];
+    for (const edge of edges) {
+      if (included.has(edge.source) && !included.has(edge.target)) additions.push(edge.target);
+      else if (included.has(edge.target) && !included.has(edge.source)) additions.push(edge.source);
+    }
+    if (!additions.length) break;
+    for (const found of additions) included.add(found);
+  }
+  return included;
+}
+
 function select(node) {
   selected = node;
   const rows = relatedEdges(node).map(edge => {
@@ -419,6 +444,13 @@ function select(node) {
     '<p>' + relatedEdges(node).length + ' relationship(s)</p>' +
     (rows || '<p>No supported relationships at the current filter.</p>');
   applyFilters();
+  if (focusBox.checked) reheat(0.5);
+}
+
+function clearSelection() {
+  selected = null;
+  side.innerHTML = '<p>Select a node to inspect its relationships and evidence.</p>';
+  applyFilters();
 }
 
 /* ---------- filters ---------- */
@@ -426,15 +458,22 @@ function applyFilters() {
   const query = searchBox.value.trim().toLowerCase();
   const relation = relationBox.value;
   const minimum = Number(assuranceBox.value);
+  const focusDepth = Number(depthBox.value);
+  const focused = focusBox.checked ? neighbourhood(selected, focusDepth) : null;
   const visibleNodes = new Set();
   let shown = 0;
+  let hiddenByFocus = 0;
   for (let i = 0; i < edges.length; i += 1) {
     const edge = edges[i];
     const text = (edge.source.path + ' ' + edge.target.path + ' ' + edge.relation).toLowerCase();
+    const inFocus = !focused || (focused.has(edge.source) && focused.has(edge.target));
     const keep = edge.score >= minimum &&
       (!relation || edge.relation === relation) &&
-      (!query || text.includes(query));
+      (!query || text.includes(query)) &&
+      inFocus;
     edgeEls[i].classList.toggle('dim', !keep);
+    edgeEls[i].classList.toggle('hidden', focused ? !inFocus : false);
+    if (focused && !inFocus) hiddenByFocus += 1;
     if (keep) {
       shown += 1;
       visibleNodes.add(edge.source);
@@ -444,14 +483,21 @@ function applyFilters() {
   for (let i = 0; i < nodes.length; i += 1) {
     const node = nodes[i];
     const matches = !query || (node.path || '').toLowerCase().includes(query);
-    const keep = visibleNodes.has(node) || (matches && !relation && minimum <= 0.3);
+    const inFocus = !focused || focused.has(node);
+    const keep = inFocus && (visibleNodes.has(node) || (matches && !relation && minimum <= 0.3));
     nodeEls[i].classList.toggle('dim', !keep);
+    nodeEls[i].classList.toggle('hidden', focused ? !inFocus : false);
     nodeEls[i].classList.toggle('selected', node === selected);
   }
   const truncated = DATA.truncated;
   status.innerHTML =
-    shown + ' of ' + edges.length + ' relationships · ' + nodes.length + ' nodes · ' +
-    'solid green = captured, dashed grey = inferred' +
+    shown + ' of ' + edges.length + ' relationships · ' + nodes.length + ' nodes' +
+    (focused
+      ? ' · <strong>focused on ' + esc(selected.label || selected.path) + '</strong>, ' +
+        focusDepth + ' hop' + (focusDepth === 1 ? '' : 's') +
+        ' (' + hiddenByFocus + ' relationships hidden)'
+      : '') +
+    ' · solid green = captured, dashed grey = inferred' +
     (truncated
       ? ' · <span class="warn">showing the ' + edges.length + ' highest-scoring of ' +
         truncated.total_edges + ' relationships; raise <code>explorer_edge_limit</code> ' +
@@ -477,12 +523,21 @@ function renderTable(minimum, relation, query) {
   ).join('');
 }
 
-[searchBox, relationBox, assuranceBox].forEach(el => el.addEventListener('input', applyFilters));
-document.getElementById('reset').addEventListener('click', () => { resetView(); reheat(0.6); });
+[searchBox, relationBox, assuranceBox, focusBox, depthBox].forEach(
+  el => el.addEventListener('input', applyFilters)
+);
+document.getElementById('reset').addEventListener('click', () => {
+  clearSelection();
+  resetView();
+  reheat(0.6);
+});
 const toggle = document.getElementById('toggle-table');
 toggle.addEventListener('click', () => {
   const active = document.body.classList.toggle('table-mode');
   toggle.setAttribute('aria-pressed', String(active));
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && selected) clearSelection();
 });
 
 resetView();

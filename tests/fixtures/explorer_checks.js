@@ -138,6 +138,107 @@
     if (REGISTRY.side.innerHTML.length === 0) fail('Enter did not select the node');
     return 'Enter selected the node';
   });
+  attempt('selecting a node hides everything outside its neighbourhood', function () {
+    if (data.nodes.length < 6) return 'fixture too small to focus';
+    REGISTRY.focus.checked = true;
+    REGISTRY.depth.value = '1';
+    REGISTRY.depth.fire('input');
+    nodeLayer.children[0].fire('click');
+    var hiddenNodes = 0;
+    for (var i = 0; i < nodeLayer.children.length; i += 1) {
+      if (nodeLayer.children[i].classes.hidden) hiddenNodes += 1;
+    }
+    if (hiddenNodes === 0) fail('focus hid nothing; the whole graph is still drawn');
+    if (hiddenNodes === nodeLayer.children.length) fail('focus hid everything, including the selection');
+    return hiddenNodes + ' of ' + nodeLayer.children.length + ' nodes hidden at 1 hop';
+  });
+  attempt('focus hides the edges outside the neighbourhood too', function () {
+    if (data.edges.length < 6) return 'fixture too small to focus';
+    REGISTRY.focus.checked = true;
+    REGISTRY.depth.value = '1';
+    nodeLayer.children[0].fire('click');
+    var hiddenEdges = 0;
+    for (var i = 0; i < edgeLayer.children.length; i += 1) {
+      if (edgeLayer.children[i].classes.hidden) hiddenEdges += 1;
+    }
+    if (hiddenEdges === 0) fail('every edge is still drawn while focused');
+    if (hiddenEdges === edgeLayer.children.length) {
+      fail('focus hid every edge, including those touching the selection');
+    }
+    return hiddenEdges + ' of ' + edgeLayer.children.length + ' edges hidden';
+  });
+  attempt('one hop means exactly one hop', function () {
+    // CHAIN_FIXTURE is set by the caller when the graph is a simple path
+    // n0-n1-...-nN. Then focusing n0 at h hops must show exactly h+1 nodes.
+    // Without this, a hop can silently traverse the whole chain in one pass.
+    if (typeof CHAIN_FIXTURE === 'undefined' || !CHAIN_FIXTURE) return 'not a chain fixture';
+    REGISTRY.focus.checked = true;
+    function visible() {
+      var n = 0;
+      for (var i = 0; i < nodeLayer.children.length; i += 1) {
+        if (!nodeLayer.children[i].classes.hidden) n += 1;
+      }
+      return n;
+    }
+    for (var hops = 1; hops <= 3; hops += 1) {
+      REGISTRY.depth.value = String(hops);
+      nodeLayer.children[0].fire('click');
+      var expected = hops + 1;
+      if (visible() !== expected) {
+        fail('at ' + hops + ' hop(s) expected ' + expected + ' nodes, drew ' + visible());
+      }
+    }
+    return 'exact hop counts hold for 1, 2, and 3 hops';
+  });
+  attempt('a wider hop setting reveals more of the graph', function () {
+    if (data.nodes.length < 6) return 'fixture too small to focus';
+    function hiddenCount() {
+      var n = 0;
+      for (var i = 0; i < nodeLayer.children.length; i += 1) {
+        if (nodeLayer.children[i].classes.hidden) n += 1;
+      }
+      return n;
+    }
+    REGISTRY.depth.value = '1';
+    REGISTRY.depth.fire('input');
+    var atOne = hiddenCount();
+    REGISTRY.depth.value = '3';
+    REGISTRY.depth.fire('input');
+    var atThree = hiddenCount();
+    if (!(atThree < atOne)) fail('3 hops hid ' + atThree + ', 1 hop hid ' + atOne);
+    return atOne + ' hidden at 1 hop, ' + atThree + ' at 3 hops';
+  });
+  attempt('the focus toggle restores the whole graph', function () {
+    if (data.nodes.length < 6) return 'fixture too small to focus';
+    REGISTRY.focus.checked = false;
+    REGISTRY.focus.fire('input');
+    for (var i = 0; i < nodeLayer.children.length; i += 1) {
+      if (nodeLayer.children[i].classes.hidden) fail('node ' + i + ' still hidden with focus off');
+    }
+    REGISTRY.focus.checked = true;
+    return 'all nodes visible with focus off';
+  });
+  attempt('Escape clears the selection', function () {
+    if (data.nodes.length < 6) return 'fixture too small to focus';
+    nodeLayer.children[0].fire('click');
+    if (!document.fire('keydown', { key: 'Escape' })) fail('no document keydown handler');
+    for (var i = 0; i < nodeLayer.children.length; i += 1) {
+      if (nodeLayer.children[i].classes.hidden) fail('node ' + i + ' still hidden after Escape');
+    }
+    return 'selection cleared, full graph restored';
+  });
+  attempt('the status line reports what focus is hiding', function () {
+    if (data.nodes.length < 6) return 'fixture too small to focus';
+    REGISTRY.focus.checked = true;
+    REGISTRY.depth.value = '1';
+    nodeLayer.children[0].fire('click');
+    if (REGISTRY.status.innerHTML.indexOf('focused on') === -1) {
+      fail('status line does not mention the focus: ' + REGISTRY.status.innerHTML.slice(0, 90));
+    }
+    if (REGISTRY.status.innerHTML.indexOf('hidden') === -1) fail('status line omits the hidden count');
+    document.fire('keydown', { key: 'Escape' });
+    return 'focus state reported';
+  });
   attempt('the search filter narrows the result set', function () {
     REGISTRY.search.value = 'zzzzz-no-such-path';
     REGISTRY.search.fire('input');

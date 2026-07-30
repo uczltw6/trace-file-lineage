@@ -80,10 +80,14 @@ register('assurance', 'select');
 register('reset', 'button');
 register('toggle-table', 'button');
 register('table-body', 'tbody');
+register('focus', 'input').checked = true;
+register('depth', 'select');
 register('lineage-data', 'script').textContent = DATA_JSON;
 REGISTRY.assurance.value = '0';
+REGISTRY.depth.value = '2';
 
 var document = {
+  _on: {},
   getElementById: function (id) {
     if (!REGISTRY[id]) throw new Error('explorer referenced a missing element: #' + id);
     return REGISTRY[id];
@@ -91,7 +95,15 @@ var document = {
   createElementNS: function (namespace, tag) { return makeElement(tag); },
   createElement: function (tag) { return makeElement(tag); },
   body: makeElement('body'),
-  addEventListener: function () {}
+  addEventListener: function (type, handler) {
+    CALLS.listeners += 1;
+    (this._on[type] = this._on[type] || []).push(handler);
+  },
+  fire: function (type, event) {
+    var handlers = this._on[type] || [];
+    for (var i = 0; i < handlers.length; i += 1) handlers[i](event || {});
+    return handlers.length;
+  }
 };
 var window = { devicePixelRatio: 1 };
 function Option(text, value) { this.text = text; this.value = value; }

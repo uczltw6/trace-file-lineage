@@ -84,7 +84,7 @@ def sample_graph() -> dict[str, object]:
 
 @unittest.skipUnless(find_engine(), "no JavaScript engine (node, deno, or jsc) available")
 class ExplorerRuntimeTests(unittest.TestCase):
-    def _run_explorer(self, graph: dict[str, object]) -> str:
+    def _run_explorer(self, graph: dict[str, object], *, chain: bool = False) -> str:
         engine = find_engine()
         assert engine is not None
         with tempfile.TemporaryDirectory() as temp:
@@ -105,6 +105,8 @@ class ExplorerRuntimeTests(unittest.TestCase):
             bundle.write_text(
                 "var DATA_JSON = "
                 + json.dumps(data)
+                + ";\nvar CHAIN_FIXTURE = "
+                + ("true" if chain else "false")
                 + ";\n"
                 + (FIXTURES / "explorer_dom_stub.js").read_text(encoding="utf-8")
                 + "\n"
@@ -132,6 +134,39 @@ class ExplorerRuntimeTests(unittest.TestCase):
         self.assertNotIn("FAIL", output)
         self.assertIn("the force simulation ran", output)
         self.assertIn("clicking a node renders its evidence panel", output)
+
+    def test_one_hop_of_focus_traverses_exactly_one_edge(self):
+        """sample_graph is a simple chain, so hop counts are exactly predictable."""
+        output = self._run_explorer(sample_graph(), chain=True)
+        line = next(entry for entry in output.splitlines() if "one hop means exactly one hop" in entry)
+        self.assertIn("PASS", line)
+        self.assertNotIn("not a chain fixture", line, "the exact-hop check did not run")
+
+    def test_focus_mode_actually_narrows_a_large_graph(self):
+        output = self._run_explorer(sample_graph())
+        line = next(
+            entry for entry in output.splitlines() if "hides everything outside" in entry
+        )
+        self.assertIn("PASS", line)
+        # Guard against the check quietly short-circuiting on a small fixture.
+        self.assertNotIn("fixture too small", line, "focus check did not actually run")
+        hidden, total = (int(value) for value in re.findall(r"(\d+) of (\d+) nodes hidden", line)[0])
+        self.assertGreater(hidden, 0)
+        self.assertLess(hidden, total)
+        # At 1 hop from one node in a 24-node chain, most of the graph should go.
+        self.assertGreater(hidden / total, 0.5, f"focus only hid {hidden}/{total}")
+
+    def test_widening_the_hop_setting_reveals_more(self):
+        output = self._run_explorer(sample_graph())
+        for fragment in (
+            "a wider hop setting reveals more of the graph",
+            "the focus toggle restores the whole graph",
+            "Escape clears the selection",
+            "the status line reports what focus is hiding",
+        ):
+            line = next(entry for entry in output.splitlines() if fragment in entry)
+            self.assertIn("PASS", line)
+            self.assertNotIn("fixture too small", line, f"{fragment!r} did not actually run")
 
     def test_captured_and_inferred_edges_are_styled_apart(self):
         output = self._run_explorer(sample_graph())
