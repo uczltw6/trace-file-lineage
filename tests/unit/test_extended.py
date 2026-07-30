@@ -387,7 +387,7 @@ class PackagingTests(unittest.TestCase):
         self.assertFalse(imports & forbidden)
         env = {key: value for key, value in os.environ.items() if key not in {"OPENAI_API_KEY", "ANTHROPIC_API_KEY"}}
         result = subprocess.run(
-            [sys.executable, str(SKILL_SCRIPTS / "lineage.py"), "doctor", "--root", str(REPO)],
+            [sys.executable, str(SKILL_SCRIPTS / "lineage.py"), "doctor", "--root", str(REPO), "--format", "json"],
             check=True,
             capture_output=True,
             text=True,

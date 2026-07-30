@@ -18,7 +18,7 @@ from .config import Config, load_config
 from .evidence import fact, now
 from .model import Edge
 from .query import alternatives, impact, orphans, receipt, reproduce, resolve, run_show, shortest_path, stale, why
-from .renderers import export_obsidian, render_html, render_markdown, render_mermaid, render_overview
+from .renderers import export_obsidian, render_doctor, render_html, render_markdown, render_mermaid, render_overview
 from .scanner import export_graph, scan
 from .normalization import normalize_graph
 from .external import apply_adapter_result
@@ -108,7 +108,7 @@ def cmd_open(args: argparse.Namespace) -> int:
             if args.destination
             else config.output_path / "views" / "explorer.html"
         )
-        rendered = render_html(store.graph(args.min_confidence), destination)
+        rendered = render_html(store.graph(args.min_confidence), destination, config.explorer_edge_limit)
         launched = False
         launch_error = None
         if not args.no_launch:
@@ -263,7 +263,7 @@ def cmd_export(args: argparse.Namespace) -> int:
             result = {"destination": str(destination), "truncated_to": config.visualization_limit}
         elif args.export_format == "html":
             destination = Path(args.destination or config.output_path / "views" / "explorer.html")
-            result = {"destination": str(render_html(graph, destination))}
+            result = {"destination": str(render_html(graph, destination, config.explorer_edge_limit))}
         else:
             if not args.destination:
                 print("Obsidian export requires --destination", file=sys.stderr)
@@ -321,7 +321,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             "not_stored_by_default": ["conversation", "prompt text", "transcript", "arbitrary environment variables", "credentials", "raw session identifiers"],
         },
     }
-    emit(payload)
+    if getattr(args, "format", "markdown") == "markdown":
+        print(render_doctor(payload), end="")
+    else:
+        emit(payload)
     return 0
 
 
@@ -517,11 +520,36 @@ def add_common_query(parser: argparse.ArgumentParser, needs_file: bool = True) -
     parser.set_defaults(handler=cmd_query)
 
 
+SUBCOMMAND_HELP = {
+    "why": "rank the producer candidates for one artifact in the current index",
+    "impact": "list what a change to this input would affect downstream",
+    "alternatives": "show competing producer candidates that were not ranked first",
+    "path": "shortest supported relationship path between two files",
+    "orphans": "artifacts with no supported parent in the index",
+    "stale": "outputs that are likely outdated relative to their inputs",
+    "run-show": "summarize one recorded run and its output clusters",
+    "snapshot": "write a workspace baseline before a file-producing task",
+    "record": "close a snapshot boundary into a recorded run",
+    "run": "wrap a command, record what it changed, and preserve its exit code",
+    "export": "write JSON, W3C PROV, Markdown, Mermaid, HTML, or Obsidian views",
+    "doctor": "report versions, optional dependencies, and format capabilities",
+}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="lineage",
-        description="Trace file origins, downstream impact, and captured task changes locally.",
-        epilog="Examples: lineage explain figures/final.png | lineage open | lineage run --task 'Render' -- python render.py",
+        description=(
+            "Trace file origins, downstream impact, and captured task changes locally.\n\n"
+            "Start here:\n"
+            "  lineage explain FILE    where did this artifact come from?\n"
+            "  lineage open            browse the whole graph in a local HTML explorer\n"
+            "  lineage run -- CMD      record what a command changed\n"
+            "  lineage impact FILE     what breaks if I change this input?\n"
+            "  lineage doctor          check versions and optional dependencies"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Every command is local and read-only against your source files.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
     scan_parser = sub.add_parser("scan", help="build or incrementally refresh the local index")
@@ -555,13 +583,13 @@ def build_parser() -> argparse.ArgumentParser:
     rebuild.add_argument("--ocr", action="store_true", help="enable optional local OCR for this rebuild")
     rebuild.set_defaults(handler=cmd_rebuild)
     for name in ("why", "impact", "alternatives"):
-        child = sub.add_parser(name)
+        child = sub.add_parser(name, help=SUBCOMMAND_HELP[name])
         child.set_defaults(query_command=name)
         add_common_query(child)
     legacy = sub.add_parser("query", help="backward-compatible alias for why")
     legacy.set_defaults(query_command="why")
     add_common_query(legacy)
-    path_parser = sub.add_parser("path")
+    path_parser = sub.add_parser("path", help=SUBCOMMAND_HELP["path"])
     path_parser.add_argument("source")
     path_parser.add_argument("target")
     path_parser.add_argument("--root", default=".")
@@ -569,10 +597,10 @@ def build_parser() -> argparse.ArgumentParser:
     path_parser.add_argument("--format", choices=["json", "markdown", "mermaid"], default="markdown")
     path_parser.set_defaults(handler=cmd_query, query_command="path", depth=5)
     for name in ("orphans", "stale"):
-        child = sub.add_parser(name)
+        child = sub.add_parser(name, help=SUBCOMMAND_HELP[name])
         child.set_defaults(query_command=name)
         add_common_query(child, needs_file=False)
-    run_show_parser = sub.add_parser("run-show")
+    run_show_parser = sub.add_parser("run-show", help=SUBCOMMAND_HELP["run-show"])
     run_show_parser.add_argument("run_id")
     run_show_parser.add_argument("--root", default=".")
     run_show_parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
@@ -582,11 +610,11 @@ def build_parser() -> argparse.ArgumentParser:
     receipt_parser.add_argument("--root", default=".")
     receipt_parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
     receipt_parser.set_defaults(handler=cmd_receipt)
-    snapshot = sub.add_parser("snapshot")
+    snapshot = sub.add_parser("snapshot", help=SUBCOMMAND_HELP["snapshot"])
     snapshot.add_argument("--root", default=".")
     snapshot.add_argument("--output", required=True)
     snapshot.set_defaults(handler=cmd_snapshot)
-    rec = sub.add_parser("record")
+    rec = sub.add_parser("record", help=SUBCOMMAND_HELP["record"])
     rec.add_argument("--root", default=".")
     rec.add_argument("--before", required=True)
     rec.add_argument("--task", required=True)
@@ -596,7 +624,7 @@ def build_parser() -> argparse.ArgumentParser:
     rec.add_argument("--handoff-ref")
     rec.add_argument("--format", choices=["json", "markdown"], default="json")
     rec.set_defaults(handler=cmd_record)
-    run = sub.add_parser("run")
+    run = sub.add_parser("run", help=SUBCOMMAND_HELP["run"])
     run.add_argument("--root", default=".")
     run.add_argument("--task", required=True)
     run.add_argument("--agent-platform", default="program")
@@ -612,7 +640,7 @@ def build_parser() -> argparse.ArgumentParser:
     recover.add_argument("--status", choices=["recovered", "incomplete"], default="recovered")
     recover.add_argument("--format", choices=["json", "markdown"], default="json")
     recover.set_defaults(handler=cmd_recover)
-    export = sub.add_parser("export")
+    export = sub.add_parser("export", help=SUBCOMMAND_HELP["export"])
     export.add_argument("--root", default=".")
     export.add_argument("--format", dest="export_format", choices=["json", "prov-jsonld", "markdown", "mermaid", "html", "obsidian"], required=True)
     export.add_argument("--destination")
@@ -680,8 +708,9 @@ def build_parser() -> argparse.ArgumentParser:
     rescore.add_argument("--root", default=".")
     rescore.add_argument("--format", choices=["json"], default="json")
     rescore.set_defaults(handler=cmd_rescore)
-    doctor = sub.add_parser("doctor")
+    doctor = sub.add_parser("doctor", help=SUBCOMMAND_HELP["doctor"])
     doctor.add_argument("--root", default=".")
+    doctor.add_argument("--format", choices=["markdown", "json"], default="markdown")
     doctor.set_defaults(handler=cmd_doctor)
     obsidian_detect = sub.add_parser("obsidian-detect", help="detect Obsidian and configured vaults without recursively scanning the computer")
     obsidian_detect.add_argument("--format", choices=["json"], default="json")

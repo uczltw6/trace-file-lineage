@@ -93,6 +93,59 @@ def render_markdown(result: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+OPTIONAL_DEPENDENCY_PURPOSE = {
+    "pypdf": "PDF native text and page structure",
+    "Pillow": "image metadata and embedded-media fingerprints",
+    "tesseract": "local OCR for images (`scan --ocr`)",
+    "pdftoppm": "rasterizing scanned PDFs before OCR",
+}
+
+
+def render_doctor(payload: dict[str, Any]) -> str:
+    """Human-readable capability report; `doctor --format json` keeps the full detail."""
+    optional = payload.get("optional", {})
+    lines = [
+        "# File Lineage doctor",
+        "",
+        f"- Version: **{payload.get('version', 'unknown')}**",
+        f"- Python: **{payload.get('python', 'unknown')}**",
+        f"- Workspace: `{payload.get('root', '?')}`"
+        + ("" if payload.get("writable") else " — **not writable**"),
+        f"- Git: {'`' + payload['git'] + '`' if payload.get('git') else '**not found** (Git rename evidence unavailable)'}",
+        f"- Core dependencies required: **{len(payload.get('core_required_dependencies', [])) or 'none'}**",
+        f"- Vendor API required: **{'yes' if payload.get('vendor_api_required') else 'no'}**",
+        "",
+        "## Optional dependencies",
+        "",
+    ]
+    if optional:
+        lines.append("| Dependency | Available | Enables |")
+        lines.append("|---|---|---|")
+        for name, value in sorted(optional.items()):
+            available = value if isinstance(value, bool) else bool((value or {}).get("available"))
+            enables = OPTIONAL_DEPENDENCY_PURPOSE.get(name, "optional adapter coverage")
+            lines.append(f"| `{name}` | {'yes' if available else 'no'} | {enables} |")
+    else:
+        lines.append("No optional dependency probes reported.")
+    lines += ["", "## Format capabilities", "", "| Formats | Tier | Native text | OCR |", "|---|---|---|---|"]
+    for entry in payload.get("format_capabilities", []):
+        formats = entry.get("formats", [])
+        shown = ", ".join(f"`{item}`" for item in formats[:6]) if isinstance(formats, list) else str(formats)
+        if isinstance(formats, list) and len(formats) > 6:
+            shown += f" (+{len(formats) - 6} more)"
+        lines.append(
+            f"| {shown} | {entry.get('capability_tier', '?')} "
+            f"| {entry.get('native_text_extraction', '?')} | {entry.get('ocr_availability', '?')} |"
+        )
+    lines += [
+        "",
+        "Degraded formats stay metadata/fingerprint-only rather than failing the scan.",
+        "Run `doctor --format json` for the complete ledger.",
+        "",
+    ]
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def render_overview(graph: dict[str, Any]) -> str:
     nodes, edges, runs, clusters = graph.get("nodes", []), graph.get("edges", []), graph.get("runs", []), graph.get("clusters", [])
     exact = sum(edge.get("confidence") == "exact" for edge in edges)
