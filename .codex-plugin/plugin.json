@@ -1,6 +1,6 @@
 {
   "name": "trace-file-lineage",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Local-first provenance and artifact navigation for files produced by code, documents, commands, and agent tasks.",
   "author": {
     "name": "Trace File Lineage Contributors"

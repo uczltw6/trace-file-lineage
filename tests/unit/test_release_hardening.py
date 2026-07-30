@@ -338,5 +338,82 @@ class RecoveryAndExporterTests(unittest.TestCase):
                 self.assertTrue(any("compression ratio" in warning.message for warning in result.warnings))
 
 
+class PackagingConsistencyTests(unittest.TestCase):
+    """Version and documentation drift is silent and embarrassing; catch it here."""
+
+    @staticmethod
+    def _declared_versions() -> dict[str, str]:
+        import re
+        import tomllib
+
+        pyproject = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
+        init_source = (CORE / "lineage_core" / "__init__.py").read_text(encoding="utf-8")
+        init_match = re.search(r'__version__ = "([^"]+)"', init_source)
+        assert init_match is not None, "lineage_core.__version__ is not a plain literal"
+        return {
+            "pyproject.toml": pyproject["project"]["version"],
+            "lineage_core.__version__": init_match.group(1),
+            ".claude-plugin/plugin.json": json.loads(
+                (REPO / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+            )["version"],
+            ".codex-plugin/plugin.json": json.loads(
+                (REPO / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
+            )["version"],
+        }
+
+    def test_every_declared_version_agrees(self):
+        versions = self._declared_versions()
+        self.assertEqual(
+            len(set(versions.values())),
+            1,
+            f"version drift across release surfaces: {versions}",
+        )
+
+    def test_the_current_version_has_a_changelog_entry(self):
+        version = self._declared_versions()["pyproject.toml"]
+        changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn(f"[{version}]", changelog, f"CHANGELOG.md has no entry for {version}")
+
+    def test_console_scripts_resolve_to_a_real_callable(self):
+        import tomllib
+
+        pyproject = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
+        scripts = pyproject["project"]["scripts"]
+        self.assertIn("lineage", scripts, "the documented short command must be installed")
+        for name, target in scripts.items():
+            module_path, _, attribute = target.partition(":")
+            module = __import__(module_path, fromlist=[attribute])
+            self.assertTrue(
+                callable(getattr(module, attribute, None)),
+                f"console script {name} points at a non-callable {target}",
+            )
+
+    def test_relative_markdown_links_point_at_files_that_exist(self):
+        import re
+
+        pattern = re.compile(r"\[[^\]]+\]\((?!https?://|mailto:|#)([^)#\s]+)")
+        broken: list[str] = []
+        documents = [REPO / name for name in ("README.md", "CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md")]
+        documents += sorted((REPO / "docs").glob("*.md"))
+        for document in documents:
+            for target in pattern.findall(document.read_text(encoding="utf-8")):
+                if not (document.parent / target).exists():
+                    broken.append(f"{document.name} -> {target}")
+        self.assertEqual(broken, [], f"broken relative links: {broken}")
+
+    def test_readme_does_not_document_a_command_the_cli_lacks(self):
+        import re
+
+        from lineage_core.cli import build_parser
+
+        known: set[str] = set()
+        for action in build_parser()._subparsers._group_actions:  # noqa: SLF001
+            known |= set(getattr(action, "choices", {}) or {})
+        documented = set(re.findall(r"^lineage ([a-z][a-z-]*)", (REPO / "README.md").read_text(encoding="utf-8"), re.M))
+        documented |= set(re.findall(r"`lineage ([a-z][a-z-]*)", (REPO / "README.md").read_text(encoding="utf-8")))
+        unknown = sorted(name for name in documented if name not in known and name not in {"install", "doctor"})
+        self.assertEqual(unknown, [], f"README documents commands the CLI does not provide: {unknown}")
+
+
 if __name__ == "__main__":
     unittest.main()

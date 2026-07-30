@@ -4,14 +4,54 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trace-file-lineage"
-version = "0.6.1"
-description = "Agent-independent local-first provenance and artifact navigation"
+version = "0.7.0"
+description = "Find out which code, data, or command produced a file — local-first provenance with no server or API key"
+readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{name = "Trace File Lineage Contributors"}]
+keywords = [
+  "provenance",
+  "lineage",
+  "data-lineage",
+  "artifacts",
+  "forensics",
+  "reproducibility",
+  "ai-agents",
+  "developer-tools",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  # No license classifier: PEP 639 supersedes it with the `license` SPDX expression.
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Software Development :: Version Control",
+  "Topic :: System :: Archiving",
+  "Typing :: Typed",
+]
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/uczltw6/trace-file-lineage"
+Repository = "https://github.com/uczltw6/trace-file-lineage"
+Issues = "https://github.com/uczltw6/trace-file-lineage/issues"
+Changelog = "https://github.com/uczltw6/trace-file-lineage/blob/main/CHANGELOG.md"
+
 [project.scripts]
+# `lineage` is the documented short form and matches the argparse prog name;
+# `trace-file-lineage` stays available as the unambiguous distribution name.
+lineage = "lineage_core.cli:main"
 trace-file-lineage = "lineage_core.cli:main"
 
 [project.optional-dependencies]
