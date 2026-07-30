@@ -16,9 +16,17 @@ DEFAULT_EXCLUDES = [
     "__pycache__/**",
     ".pytest_cache/**",
     ".mypy_cache/**",
+    ".ruff_cache/**",
     ".tox/**",
     "dist/**",
     "build/**",
+    "*.egg-info/**",
+    # Tool output, not project content. Coverage in particular writes a data file
+    # per process, so a coverage run inside a workspace would otherwise show up as
+    # a batch of new artifacts and pollute the run's changed-file list.
+    ".coverage",
+    ".coverage.*",
+    "htmlcov/**",
     ".codex/**",
     ".claude/**",
     ".cursor/**",

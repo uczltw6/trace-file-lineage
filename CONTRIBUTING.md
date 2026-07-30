@@ -62,12 +62,17 @@ python -m pip install coverage
 SITE=$(python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
 echo "import coverage; coverage.process_startup()" > "$SITE/coverage_subprocess.pth"
 
-COVERAGE_PROCESS_START=$PWD/pyproject.toml PYTHONDONTWRITEBYTECODE=1 \
+COVERAGE_PROCESS_START=$PWD/pyproject.toml COVERAGE_FILE=$PWD/.coverage \
+  PYTHONDONTWRITEBYTECODE=1 \
   python -m coverage run -m unittest discover -s tests -p 'test_*.py'
 python -m coverage combine && python -m coverage report
 ```
 
-Without that hook the CLI appears to be around 43% covered when it is really
+`COVERAGE_FILE` must be absolute. The hook starts coverage in *every* child
+process, so without it the commands wrapped by `lineage run` drop data files into
+the temporary workspace under test, and the run counts them as new artifacts.
+
+Without the hook the CLI appears to be around 43% covered when it is really
 above 90%. Some modules stay below the floor because they need a dependency or
 platform this machine may not have: OCR needs Tesseract, image fingerprinting
 needs Pillow, and the download-origin adapters are per-operating-system.

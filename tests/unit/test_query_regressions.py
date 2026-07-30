@@ -103,6 +103,58 @@ class FindFuzzyRankingTests(unittest.TestCase):
             self.assertIn("figure.svg", json.dumps(payload))
 
 
+class ToolOutputExclusionTests(unittest.TestCase):
+    """Tool output must not be indexed as project content.
+
+    Coverage writes one data file per process. When a workspace was measured
+    under coverage, the files written by commands `lineage run` had wrapped
+    appeared in that run's changed-file list, inflating the count.
+    """
+
+    def test_coverage_artifacts_are_excluded(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config = Config(Path(temp))
+            for name in (
+                ".coverage",
+                ".coverage.host.pid1234.XyZ",
+                "htmlcov/index.html",
+                ".ruff_cache/content",
+                "package.egg-info/PKG-INFO",
+            ):
+                self.assertTrue(config.excluded(name), f"{name} should be excluded")
+
+    def test_ordinary_dotfiles_are_still_indexed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config = Config(Path(temp))
+            for name in (".gitignore", "coverage_report.md", "src/coverage.py"):
+                self.assertFalse(config.excluded(name), f"{name} should not be excluded")
+
+    def test_a_wrapped_command_writing_a_coverage_file_still_reports_one_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "make.py").write_text(
+                "from pathlib import Path\n"
+                "Path('out.txt').write_text('result', encoding='utf-8')\n"
+                # Mimic what the coverage subprocess hook does to a child's cwd.
+                "Path('.coverage.host.pid999.AbCd').write_bytes(b'coverage data')\n",
+                encoding="utf-8",
+            )
+            run_cli([
+                "run", "--root", str(root), "--task", "Make one output",
+                "--", sys.executable, str(root / "make.py"),
+            ])
+            receipt = json.loads(
+                run_cli(["receipt", "--root", str(root), "--format", "json"]).stdout
+            )
+            manifest = [item["path"] for item in receipt["manifest"]]
+            self.assertIn("out.txt", manifest)
+            self.assertNotIn(
+                ".coverage.host.pid999.AbCd", manifest,
+                f"coverage output leaked into the run manifest: {manifest}",
+            )
+            self.assertEqual(receipt["manifest_count"], 1, f"manifest={manifest}")
+
+
 class VirtualNodeIdentityTests(unittest.TestCase):
     """Re-importing a graph must reuse virtual nodes rather than colliding.
 

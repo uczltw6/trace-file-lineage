@@ -58,6 +58,11 @@ jobs:
       - name: Run the suite under coverage
         env:
           COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
+          # Absolute, so the per-process data files land here rather than in
+          # whatever directory a child process happens to run in. Without this,
+          # commands wrapped by `lineage run` drop coverage files into the
+          # temporary workspace under test and it counts them as new artifacts.
+          COVERAGE_FILE: ${{ github.workspace }}/.coverage
           PYTHONDONTWRITEBYTECODE: "1"
         run: |
           python -m coverage run -m unittest discover -s tests -p "test_*.py"

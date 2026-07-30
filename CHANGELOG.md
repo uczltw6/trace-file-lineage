@@ -50,6 +50,10 @@ schema or CLI contracts with migration guidance.
   toggle to see everything, and Escape to clear. One node at a single hop draws 4 nodes
   instead of 318.
 - **`lineage --version` did not exist.**
+- **Tool output was indexed as project content.** Coverage writes one data file per
+  process, so measuring a workspace under coverage made every wrapped command appear to
+  have produced extra artifacts, inflating its changed-file list. Coverage data files,
+  `htmlcov/`, `.ruff_cache/`, and `*.egg-info/` are now excluded by default.
 
 ### Added
 
