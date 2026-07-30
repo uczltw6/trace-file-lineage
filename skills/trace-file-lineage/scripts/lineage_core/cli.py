@@ -551,6 +551,7 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Every command is local and read-only against your source files.",
     )
+    parser.add_argument("--version", action="version", version=f"trace-file-lineage {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
     scan_parser = sub.add_parser("scan", help="build or incrementally refresh the local index")
     scan_parser.add_argument("--root", default=".")
@@ -725,6 +726,12 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+ISSUE_TRACKER = "https://github.com/uczltw6/trace-file-lineage/issues"
+EXIT_EXPECTED_FAILURE = 2
+EXIT_INTERRUPTED = 130
+EXIT_UNEXPECTED_FAILURE = 70
+
+
 def main(argv: list[str] | None = None) -> int:
     configure_utf8_streams()
     args = build_parser().parse_args(argv)
@@ -732,7 +739,19 @@ def main(argv: list[str] | None = None) -> int:
         return int(args.handler(args))
     except KeyboardInterrupt:
         print("lineage: interrupted", file=sys.stderr)
-        return 130
+        return EXIT_INTERRUPTED
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
         print(f"lineage: {exc}", file=sys.stderr)
-        return 2
+        return EXIT_EXPECTED_FAILURE
+    except Exception as exc:  # noqa: BLE001 - a bug must not surface as a raw traceback
+        # Anything reaching here is a defect rather than a user error. Report it
+        # as such, and keep the traceback available for whoever investigates.
+        if os.environ.get("LINEAGE_TRACEBACK"):
+            raise
+        print(
+            f"lineage: unexpected {type(exc).__name__}: {exc}\n"
+            f"lineage: this is a bug. Please report it at {ISSUE_TRACKER}\n"
+            "lineage: re-run with LINEAGE_TRACEBACK=1 for the full traceback.",
+            file=sys.stderr,
+        )
+        return EXIT_UNEXPECTED_FAILURE

@@ -111,29 +111,46 @@ def alternatives(store: Store, path: str, minimum: float = 0.0) -> dict[str, Any
     return result
 
 
+def _edge_strength(edge: dict[str, Any]) -> tuple[int, float, str]:
+    """Rank competing edges: a verified causal event outranks any score."""
+    return (
+        1 if _edge_verified(edge) else 0,
+        float(edge.get("score") or 0.0),
+        str(edge.get("id") or ""),
+    )
+
+
 def impact(store: Store, path: str, minimum: float = 0.30, depth: int = 5) -> dict[str, Any]:
     source = resolve(store, path)
     if not source:
         return {"query": "impact", "source": path, "status": "not-found"}
-    queue = deque([(source["id"], 0)])
+    # Traverse one whole level at a time. Within a level, several parents may
+    # reach the same artifact, so collect the candidates first and keep only the
+    # best-supported edge per artifact. Reporting whichever edge happened to
+    # arrive first would let a naming heuristic mask a verified path, and would
+    # make the result depend on queue order.
     seen = {source["id"]}
-    direct, indirect = [], []
-    while queue:
-        current, level = queue.popleft()
-        if level >= depth:
-            continue
-        # store.outgoing is ordered by descending score, so the first edge that
-        # reaches a target is its best-supported one. Reporting only newly seen
-        # targets keeps each downstream artifact at its shortest depth and stops
-        # the queried file reappearing inside its own downstream set.
-        for edge in store.outgoing(current, minimum):
-            if edge["target_id"] in seen:
-                continue
-            seen.add(edge["target_id"])
+    frontier = [source["id"]]
+    direct: list[dict[str, Any]] = []
+    indirect: list[dict[str, Any]] = []
+    for level in range(depth):
+        best_by_target: dict[str, dict[str, Any]] = {}
+        for current in frontier:
+            for edge in store.outgoing(current, minimum):
+                target = edge["target_id"]
+                if target in seen:
+                    continue
+                incumbent = best_by_target.get(target)
+                if incumbent is None or _edge_strength(edge) > _edge_strength(incumbent):
+                    best_by_target[target] = edge
+        if not best_by_target:
+            break
+        for target, edge in best_by_target.items():
+            seen.add(target)
             decorated = _decorate(store, edge)
             decorated["depth"] = level + 1
             (direct if level == 0 else indirect).append(decorated)
-            queue.append((edge["target_id"], level + 1))
+        frontier = list(best_by_target)
     return {"query": "impact", "source": source, "status": "ok", "direct": direct, "indirect": indirect}
 
 

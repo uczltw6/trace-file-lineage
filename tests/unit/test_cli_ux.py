@@ -33,6 +33,80 @@ def run_cli(arguments: list[str], *, expected: int = 0) -> subprocess.CompletedP
     return completed
 
 
+class UnexpectedFailureTests(unittest.TestCase):
+    """An unforeseen bug should read as a reportable error, not a Python traceback.
+
+    The `find` crash surfaced a raw TypeError because main() only caught four
+    exception types. The specific bug is fixed; this covers the whole class.
+    """
+
+    @staticmethod
+    def _run_with_injected_failure(exception: str) -> subprocess.CompletedProcess[str]:
+        program = (
+            "import sys;"
+            f"sys.path.insert(0, {str(SOURCE_ROOT)!r});"
+            "from lineage_core import cli;"
+            f"cli.cmd_doctor = lambda args: (_ for _ in ()).throw({exception});"
+            "sys.argv = ['lineage', 'doctor'];"
+            "sys.exit(cli.main())"
+        )
+        return subprocess.run(
+            [sys.executable, "-c", program],
+            capture_output=True,
+            encoding="utf-8",
+            check=False,
+        )
+
+    def test_unexpected_exception_becomes_a_clean_error(self):
+        completed = self._run_with_injected_failure("TypeError('boom')")
+
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertNotIn("Traceback (most recent call last)", completed.stderr)
+        self.assertIn("lineage:", completed.stderr)
+        self.assertIn("TypeError", completed.stderr)
+
+    def test_unexpected_exception_points_at_the_issue_tracker(self):
+        completed = self._run_with_injected_failure("KeyError('missing')")
+
+        self.assertIn("github.com/uczltw6/trace-file-lineage/issues", completed.stderr)
+
+    def test_unexpected_exception_uses_a_distinct_exit_code(self):
+        expected = self._run_with_injected_failure("ValueError('handled')")
+        unexpected = self._run_with_injected_failure("AttributeError('surprise')")
+
+        self.assertEqual(expected.returncode, 2, "known failures keep exit code 2")
+        self.assertEqual(unexpected.returncode, 70, "unexpected failures are distinguishable")
+
+    def test_traceback_is_available_when_explicitly_requested(self):
+        environment = os.environ.copy()
+        environment["LINEAGE_TRACEBACK"] = "1"
+        program = (
+            "import sys;"
+            f"sys.path.insert(0, {str(SOURCE_ROOT)!r});"
+            "from lineage_core import cli;"
+            "cli.cmd_doctor = lambda args: (_ for _ in ()).throw(TypeError('boom'));"
+            "sys.argv = ['lineage', 'doctor'];"
+            "sys.exit(cli.main())"
+        )
+        completed = subprocess.run(
+            [sys.executable, "-c", program],
+            capture_output=True,
+            encoding="utf-8",
+            check=False,
+            env=environment,
+        )
+        self.assertIn("Traceback (most recent call last)", completed.stderr)
+
+
+class VersionFlagTests(unittest.TestCase):
+    def test_version_flag_reports_the_package_version(self):
+        sys.path.insert(0, str(SOURCE_ROOT))
+        from lineage_core import __version__
+
+        completed = run_cli(["--version"])
+        self.assertIn(__version__, completed.stdout + completed.stderr)
+
+
 class HelpDiscoverabilityTests(unittest.TestCase):
     def test_every_subcommand_documents_itself_in_top_level_help(self):
         completed = run_cli(["--help"])
