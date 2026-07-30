@@ -7,19 +7,17 @@ Built for Python and notebook work: research code, data analysis, and the piles 
 files AI coding agents now generate.
 
 [![CI](https://github.com/uczltw6/trace-file-lineage/actions/workflows/ci.yml/badge.svg)](https://github.com/uczltw6/trace-file-lineage/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/trace-file-lineage)](https://pypi.org/project/trace-file-lineage/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%20%E2%80%93%203.14-blue)](https://www.python.org/)
 
 ```bash
-pip install git+https://github.com/uczltw6/trace-file-lineage
+pip install trace-file-lineage
 lineage demo
 ```
 
 `lineage demo` builds a small project, records a run, and shows you the answer — under
 a second, nothing to configure, and it writes only into `./lineage-demo`.
-
-> **Not on PyPI yet.** `pip install trace-file-lineage` will work from the first
-> release; until then use the Git URL above.
 
 ---
 

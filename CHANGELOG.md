@@ -5,7 +5,7 @@ All notable changes to this project are documented here. This project follows
 minor releases add compatible adapters or queries, and major releases may change the
 schema or CLI contracts with migration guidance.
 
-## [0.7.0] — unreleased
+## [0.7.0] — 2026-07-30
 
 ### Security
 
