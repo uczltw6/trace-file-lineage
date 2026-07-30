@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4ec98a"/>
+    </marker>
+    <marker id="dashed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <!-- Flat fill rather than a gradient: it compresses to a fraction of the size
+       when rasterized, which matters for an image GitHub caps at 1 MB. -->
+  <rect width="1280" height="640" fill="#14161a"/>
+
+  <!-- Headline -->
+  <text x="96" y="150" fill="#e8eaed" font-size="62" font-weight="700" letter-spacing="-1.5">Where did this file</text>
+  <text x="96" y="222" fill="#e8eaed" font-size="62" font-weight="700" letter-spacing="-1.5">come from?</text>
+
+  <text x="96" y="288" fill="#9aa0ab" font-size="26">Local-first provenance for workspaces where agents and</text>
+  <text x="96" y="324" fill="#9aa0ab" font-size="26">scripts generate files faster than you can track them.</text>
+
+  <!-- Graph illustration: input -> script -> artifact, plus a captured run -->
+  <g transform="translate(96, 396)">
+    <!-- edges -->
+    <line x1="86" y1="52" x2="252" y2="52" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#dashed)"/>
+    <line x1="368" y1="52" x2="534" y2="52" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#dashed)"/>
+    <path d="M 300 120 C 300 150, 600 150, 600 82" fill="none" stroke="#4ec98a" stroke-width="3.5" marker-end="url(#solid)"/>
+
+    <!-- nodes -->
+    <g>
+      <rect x="0" y="26" width="86" height="52" rx="10" fill="#1f2329" stroke="#2e333c"/>
+      <text x="43" y="50" fill="#4ec98a" font-size="15" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">raw.csv</text>
+      <text x="43" y="68" fill="#6b7280" font-size="12" text-anchor="middle">data</text>
+    </g>
+    <g>
+      <rect x="252" y="26" width="116" height="52" rx="10" fill="#1f2329" stroke="#2e333c"/>
+      <text x="310" y="50" fill="#6aa2ff" font-size="15" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">plot.py</text>
+      <text x="310" y="68" fill="#6b7280" font-size="12" text-anchor="middle">code</text>
+    </g>
+    <g>
+      <rect x="534" y="26" width="150" height="52" rx="10" fill="#1f2329" stroke="#2e333c"/>
+      <text x="609" y="50" fill="#e0a94a" font-size="15" text-anchor="middle" font-family="ui-monospace, Menlo, monospace">panel.svg</text>
+      <text x="609" y="68" fill="#6b7280" font-size="12" text-anchor="middle">image</text>
+    </g>
+    <g>
+      <rect x="222" y="98" width="176" height="46" rx="10" fill="#16241d" stroke="#2f5f47"/>
+      <text x="310" y="127" fill="#4ec98a" font-size="14" text-anchor="middle">recorded run</text>
+    </g>
+
+    <!-- legend -->
+    <g transform="translate(724, 20)">
+      <line x1="0" y1="14" x2="34" y2="14" stroke="#4ec98a" stroke-width="3.5"/>
+      <text x="46" y="19" fill="#e8eaed" font-size="17">verified — we watched it happen</text>
+      <line x1="0" y1="52" x2="34" y2="52" stroke="#6b7280" stroke-width="2" stroke-dasharray="6 4"/>
+      <text x="46" y="57" fill="#9aa0ab" font-size="17">candidate — an educated guess</text>
+      <text x="0" y="104" fill="#6b7280" font-size="15">Proof and inference are never mixed.</text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <text x="96" y="592" fill="#6aa2ff" font-size="19" font-family="ui-monospace, Menlo, monospace">pip install trace-file-lineage</text>
+  <text x="1184" y="592" fill="#6b7280" font-size="17" text-anchor="end">MIT · zero dependencies · Python 3.11+</text>
+</svg>

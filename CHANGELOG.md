@@ -47,6 +47,12 @@ schema or CLI contracts with migration guidance.
   adapters, installation, limitations, and compatibility.
 - **PyPI metadata**: long description, classifiers, keywords, and project URLs.
 
+- **An honest comparison with Git, DVC, OpenLineage, MLflow, and Weights & Biases**
+  in `docs/comparison.md`, including an explicit list of situations where you should
+  use something else or nothing at all.
+- **A social preview image** in `docs/assets/`, with conversion instructions, so
+  links to the repository render with a card instead of a blank box.
+
 ### Changed
 
 - **`doctor` now prints a readable report by default.** It previously emitted raw JSON.

@@ -52,11 +52,18 @@ It tells you what it knows, what it suspects, and what it cannot tell you.
 
 ---
 
-## Why you might want this
+## Why not just use Git?
 
-**Git tracks your commits. It does not track where your files came from.** It cannot
-tell you which of four notebooks produced a PNG, and it knows nothing at all about the
-files you never committed.
+**Git tracks your commits. It does not track where your files came from.** It can tell
+you that `figure.png` changed in some commit; it cannot tell you which of your four
+notebooks produced it. And it knows nothing at all about the files you never committed —
+build outputs, intermediate data, everything an agent left in your working directory.
+
+Most other provenance tools (DVC, OpenLineage, MLflow) need you to have set something up
+*before* the file was created. **This one is for when you didn't.** It composes with
+them rather than replacing them, and
+[docs/comparison.md](docs/comparison.md) is honest about when you should use one of
+those instead — or nothing at all.
 
 Four things people use this for:
 
