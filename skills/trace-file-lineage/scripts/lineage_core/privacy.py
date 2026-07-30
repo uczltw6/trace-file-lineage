@@ -6,7 +6,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-
 SENSITIVE_KEY = re.compile(
     r"(?i)(conversation|transcript|messages?|prompt|environment|env|password|passwd|token|secret|api[-_]?key|authorization|cookie)"
 )

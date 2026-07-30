@@ -1,5 +1,5 @@
-from .base import Adapter, AdapterResult, Candidate, ExternalAdapter, NormalizedEdge, NormalizedNode
 from .agent_runs import AgentRunAdapter
+from .base import Adapter, AdapterResult, Candidate, ExternalAdapter, NormalizedEdge, NormalizedNode
 from .codegraph import CodeGraphAdapter
 from .documents import DocumentAdapter
 from .dvc import DVCAdapter

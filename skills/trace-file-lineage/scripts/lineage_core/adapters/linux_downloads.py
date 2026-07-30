@@ -6,7 +6,6 @@ from pathlib import Path
 
 from .origin import OriginRecord, get_xattr, origin_candidates
 
-
 XATTRS = (
     ("user.xdg.origin.url", False),
     ("user.xdg.referrer.url", True),

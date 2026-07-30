@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import shutil
@@ -11,20 +12,27 @@ from typing import Any
 
 from . import __version__
 from .adapters import AgentRunAdapter, CodeGraphAdapter, DVCAdapter, OpenLineageAdapter
+from .capabilities import (
+    capability_matrix,
+    capability_tiers,
+    dependency_status,
+    interoperability_capabilities,
+    platform_capabilities,
+    release_capability_ledger,
+)
 from .capture import pending_captures, record, recover_capture, run_command, write_snapshot
-from .capabilities import capability_matrix, capability_tiers, dependency_status, interoperability_capabilities, platform_capabilities, release_capability_ledger
 from .clustering import build_clusters
 from .config import Config, load_config
 from .evidence import fact, now
+from .external import apply_adapter_result
 from .model import Edge
+from .normalization import normalize_graph
+from .platforms import detect_obsidian, open_obsidian
+from .privacy import private_reference
+from .prov import export_prov_jsonld, load_prov_jsonld
 from .query import alternatives, impact, orphans, receipt, reproduce, resolve, run_show, shortest_path, stale, why
 from .renderers import export_obsidian, render_doctor, render_html, render_markdown, render_mermaid, render_overview
 from .scanner import export_graph, scan
-from .normalization import normalize_graph
-from .external import apply_adapter_result
-from .prov import export_prov_jsonld, load_prov_jsonld
-from .privacy import private_reference
-from .platforms import detect_obsidian, open_obsidian
 from .storage import Store
 
 
@@ -33,10 +41,8 @@ def configure_utf8_streams() -> None:
     for stream in (sys.stdout, sys.stderr):
         reconfigure = getattr(stream, "reconfigure", None)
         if callable(reconfigure):
-            try:
+            with contextlib.suppress(OSError, ValueError):
                 reconfigure(encoding="utf-8", errors="backslashreplace")
-            except (OSError, ValueError):
-                pass
 
 
 def emit(value: Any, fmt: str = "json") -> None:
@@ -131,7 +137,7 @@ def cmd_open(args: argparse.Namespace) -> int:
 
 
 def cmd_query(args: argparse.Namespace) -> int:
-    config, store = open_store(Path(args.root))
+    _, store = open_store(Path(args.root))
     try:
         if args.query_command == "why":
             result = why(store, args.file, args.min_confidence, args.depth)
@@ -345,7 +351,7 @@ def cmd_obsidian_open(args: argparse.Namespace) -> int:
 
 
 def cmd_search(args: argparse.Namespace) -> int:
-    config, store = open_store(Path(args.root))
+    _, store = open_store(Path(args.root))
     try:
         matches = store.search_text(args.query, args.source, args.limit)
         emit({"query": args.query, "source": args.source or "all", "matches": matches, "count": len(matches)}, args.format)
@@ -355,7 +361,7 @@ def cmd_search(args: argparse.Namespace) -> int:
 
 
 def cmd_find(args: argparse.Namespace) -> int:
-    config, store = open_store(Path(args.root))
+    _, store = open_store(Path(args.root))
     try:
         filename_matches = store.find_files(args.query, kind=args.type, status=args.status, limit=args.limit)
         text_matches = [] if args.filename_only else store.search_text(args.query, args.source, args.limit)
@@ -743,7 +749,7 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
         print(f"lineage: {exc}", file=sys.stderr)
         return EXIT_EXPECTED_FAILURE
-    except Exception as exc:  # noqa: BLE001 - a bug must not surface as a raw traceback
+    except Exception as exc:
         # Anything reaching here is a defect rather than a user error. Report it
         # as such, and keep the traceback available for whoever investigates.
         if os.environ.get("LINEAGE_TRACEBACK"):

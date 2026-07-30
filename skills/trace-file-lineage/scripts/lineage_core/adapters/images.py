@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import struct
 from pathlib import Path
+from typing import ClassVar
 
 
 class ImageAdapter:
     name = "image"
-    suffixes = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".tif", ".tiff", ".bmp"}
+    suffixes: ClassVar[set[str]] = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".tif", ".tiff", ".bmp"}
 
     def inspect(self, path: Path, relative: str, root: Path) -> tuple[list, dict, list[str]]:
         metadata: dict = {"format": path.suffix.lower().lstrip(".")}

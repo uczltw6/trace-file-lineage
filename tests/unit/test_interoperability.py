@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 import tempfile
 import unittest
-import zipfile
 from pathlib import Path
 
 SKILL_SCRIPTS = Path(__file__).resolve().parents[2] / "skills" / "trace-file-lineage" / "scripts"
@@ -22,7 +20,6 @@ from lineage_core.prov import export_prov_jsonld, import_prov_jsonld
 from lineage_core.query import stale
 from lineage_core.renderers import render_markdown
 from lineage_core.scanner import scan
-from lineage_core.scoring import evidence_priority
 from lineage_core.storage import Store
 
 

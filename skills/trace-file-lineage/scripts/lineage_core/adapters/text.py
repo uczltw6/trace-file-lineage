@@ -8,7 +8,6 @@ from ..evidence import fact
 from ..identity import normalize_relative
 from .base import Candidate
 
-
 MARKUP_SUFFIXES = {".txt", ".log", ".md", ".rst", ".adoc", ".org", ".tex"}
 CONFIG_SUFFIXES = {".json", ".jsonl", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".xml"}
 TABULAR_SUFFIXES = {".csv", ".tsv"}

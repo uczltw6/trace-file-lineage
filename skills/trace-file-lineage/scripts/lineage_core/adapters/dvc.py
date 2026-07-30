@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .base import AdapterResult, NormalizedEdge, NormalizedNode
 from ..evidence import fact
 from ..identity import normalize_relative
 from ..yaml_lite import StructuredDataError, load_structured
+from .base import AdapterResult, NormalizedEdge, NormalizedNode
 
 
 def _list(value: Any) -> list[Any]:
@@ -115,7 +115,7 @@ class DVCAdapter:
                         continue
                     path = _local_path(item_path, manifest, root, wdir)
                     key = f"dvc-file:{path}"
-                    node_path = path if not path.startswith("@dataset/") else path
+                    node_path = path
                     result.nodes.append(NormalizedNode(key, "dataset" if path.startswith("@") else "file", Path(path).name, node_path))
                     evidence = [declared]
                     locked = _lock_fact(lock_stage, role, item_path, normalize_relative(lock_path, root))

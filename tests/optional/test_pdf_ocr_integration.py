@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import os
 import shutil
 import subprocess
@@ -9,7 +8,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-
 
 REPO = Path(__file__).resolve().parents[2]
 SKILL_SCRIPTS = REPO / "skills" / "trace-file-lineage" / "scripts"
@@ -20,8 +18,8 @@ from lineage_core.config import Config
 from lineage_core.query import why
 from lineage_core.scanner import scan
 from lineage_core.storage import Store
-from tests.fixtures.generate_pdf_fixture import APPENDIX_TEXT, OCR_TEXT, ORIGIN_TEXT, generate
 
+from tests.fixtures.generate_pdf_fixture import APPENDIX_TEXT, OCR_TEXT, generate
 
 FIXTURE_DEPENDENCIES = ("pypdf", "PIL", "reportlab", "docx")
 

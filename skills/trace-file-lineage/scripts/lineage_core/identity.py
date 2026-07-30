@@ -7,7 +7,6 @@ import stat
 import unicodedata
 from pathlib import Path, PurePath, PureWindowsPath
 
-
 WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[\\/]")
 WINDOWS_UNC = re.compile(r"^(?:\\\\|//)[^\\/]+[\\/][^\\/]+")
 

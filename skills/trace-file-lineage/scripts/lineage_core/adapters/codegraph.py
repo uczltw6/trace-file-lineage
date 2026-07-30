@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
-from .base import AdapterResult, NormalizedEdge, NormalizedNode
 from ..evidence import fact
 from ..identity import normalize_relative
 from ..privacy import sanitize_metadata
-
+from .base import AdapterResult, NormalizedEdge, NormalizedNode
 
 RELATIONS = {
     "read": "used",

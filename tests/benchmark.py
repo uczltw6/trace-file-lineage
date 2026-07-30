@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
+import resource
 import statistics
 import sys
 import tempfile
 import time
-import resource
 from pathlib import Path
 
 SKILL_SCRIPTS = Path(__file__).resolve().parents[1] / "skills" / "trace-file-lineage" / "scripts"

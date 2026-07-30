@@ -75,4 +75,51 @@ start-directory = "tests"
 
 [tool.ruff]
 target-version = "py311"
-line-length = 120
+line-length = 140
+
+[tool.ruff.lint]
+# A focused set: correctness, dead code, import hygiene, likely bug patterns,
+# and the security rules that matter for a tool reading untrusted files. Rules
+# that merely disagree with this project's deliberate design are left off, with
+# the reason recorded, so that a finding here always means something.
+select = [
+  "F",      # pyflakes: unused imports and variables, undefined names
+  "E4", "E7", "E9",  # pycodestyle errors worth failing a build over
+  "I",      # import sorting
+  "UP",     # pyupgrade: keep syntax current with the declared Python floor
+  "B",      # bugbear: likely bugs
+  "S",      # bandit: security
+  "DTZ",    # naive datetimes
+  "SIM",    # simplifiable constructs
+  "RUF",    # ruff-specific, notably dead conditionals
+  "PL",     # pylint subset
+]
+ignore = [
+  # The scanner, argparse builder, and adapters are legitimately branchy; a
+  # complexity cap here would only invite suppressions.
+  "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917",
+  "PLR2004",  # inline thresholds read better than named constants in tests
+  "S101",     # assert is how unittest expresses itself
+  "SIM108",   # a ternary is not always clearer than if/else
+  # Lazy imports ARE the optional-dependency mechanism: PIL, pypdf, and the
+  # platform adapters must only be imported when actually present.
+  "PLC0415",
+  # `lineage run` exists to launch a child process. It always passes an argument
+  # array and never requests a shell, which is the safe form these rules ask for.
+  "S603", "S607",
+  # Non-ASCII characters appear in test fixtures on purpose, to cover
+  # normalization and encoding behaviour.
+  "RUF001", "RUF002", "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests prepend the skill script directory to sys.path before importing the
+# package under test, so imports cannot all sit at the top of the file.
+"tests/**" = ["E402"]
+"skills/trace-file-lineage/scripts/self_test.py" = ["E402"]
+# Every interpolation here is an internal literal fragment or a generated `?`
+# placeholder list; user values are always bound as parameters.
+"skills/trace-file-lineage/scripts/lineage_core/storage/sqlite_store.py" = ["S608"]
+# The explorer's JavaScript lives in string constants, so line length there is
+# governed by the JavaScript rather than by Python style.
+"skills/trace-file-lineage/scripts/lineage_core/renderers/explorer_assets.py" = ["E501"]

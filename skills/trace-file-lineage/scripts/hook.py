@@ -28,7 +28,8 @@ def main() -> int:
                 path.mkdir(parents=True, exist_ok=True)
                 with (path / "hook-errors.log").open("a", encoding="utf-8") as handle:
                     handle.write(traceback.format_exc() + "\n")
-            except Exception:
+            except Exception:  # noqa: S110 - a hook must never break the user's turn
+                # Even the error log is best effort; there is nowhere left to report to.
                 pass
         print("{}")
     return 0

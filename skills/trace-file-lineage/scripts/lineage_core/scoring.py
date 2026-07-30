@@ -29,7 +29,7 @@ def aggregate(evidence: list[Evidence]) -> tuple[float, str]:
     for item in evidence:
         if item.status != "active":
             continue
-        groups[item.signal_group] = max(groups[item.signal_group], max(0.0, min(item.weight, 0.99)))
+        groups[item.signal_group] = max(groups[item.signal_group], 0.0, min(item.weight, 0.99))
     remaining = 1.0
     for weight in groups.values():
         remaining *= 1.0 - weight

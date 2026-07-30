@@ -92,7 +92,12 @@ class WindowsDownloadOriginAdapter:
                     url = next((name for name in ("tab_url", "site_url", "url", "referrer") if name in columns), None)
                     if not target or not url:
                         continue
-                    query = f'SELECT "{target}", "{url}" FROM downloads WHERE "{target}" IS NOT NULL LIMIT 100000'
+                    # target/url can only be one of the literals in the tuples above, and the
+                    # connection is read-only, so no caller-controlled text reaches the SQL.
+                    query = (
+                        f'SELECT "{target}", "{url}" FROM downloads '  # noqa: S608 - fixed allowlist
+                        f'WHERE "{target}" IS NOT NULL LIMIT 100000'
+                    )
                     for target_path, origin in connection.execute(query):
                         if target_path and origin:
                             self._downloads.setdefault(_path_key(str(target_path)), []).append(str(origin))

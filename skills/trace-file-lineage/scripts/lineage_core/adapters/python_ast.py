@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+from typing import ClassVar
 
 from ..evidence import fact
 from ..identity import normalize_relative
 from .base import Candidate
 from .text import decode_native_path
-
 
 READ_CALLS = {
     "Path.read_text": None,
@@ -75,7 +75,7 @@ def literal_path(node: ast.AST | None, variables: dict[str, str]) -> str | None:
 
 class PythonAdapter:
     name = "python-ast"
-    suffixes = {".py", ".ipynb"}
+    suffixes: ClassVar[set[str]] = {".py", ".ipynb"}
 
     def inspect(self, path: Path, relative: str, root: Path) -> tuple[list[Candidate], dict, list[str]]:
         warnings: list[str] = []

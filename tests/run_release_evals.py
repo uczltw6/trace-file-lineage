@@ -7,7 +7,6 @@ import time
 import unittest
 from pathlib import Path
 
-
 CASES = {
     "ambiguous producers": "scenarios.test_scenarios.ScenarioTests.test_04_ambiguous_producer",
     "near-match and current/old document versions": "optional.test_pdf_ocr_integration.PDFRuntimeIntegrationTests.test_real_pypdf_extraction_media_similarity_and_origin_ranking",

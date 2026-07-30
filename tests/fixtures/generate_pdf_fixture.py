@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import textwrap
 import zipfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-
 
 ORIGIN_TEXT = (
     "Trace File Lineage deterministic PDF integration fixture. "
@@ -107,8 +106,8 @@ def _write_docx(path: Path, text: str, image_path: Path, title: str) -> None:
     properties = document.core_properties
     properties.author = "Trace File Lineage"
     properties.title = title
-    properties.created = datetime(2020, 1, 2, 3, 4, 6)
-    properties.modified = datetime(2020, 1, 2, 3, 4, 6)
+    properties.created = datetime(2020, 1, 2, 3, 4, 6, tzinfo=UTC)
+    properties.modified = datetime(2020, 1, 2, 3, 4, 6, tzinfo=UTC)
     document.save(path)
     _normalize_docx_zip(path)
 

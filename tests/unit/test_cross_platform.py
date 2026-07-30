@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import plistlib
@@ -12,7 +13,6 @@ import unicodedata
 import unittest
 from pathlib import Path
 from unittest import mock
-
 
 REPO = Path(__file__).resolve().parents[2]
 SKILL_SCRIPTS = REPO / "skills" / "trace-file-lineage" / "scripts"
@@ -73,10 +73,8 @@ class PortablePathTests(unittest.TestCase):
             probe.mkdir()
             alternate = base / "cASEpROBE"
             insensitive = False
-            try:
+            with contextlib.suppress(OSError):
                 insensitive = alternate.exists() and alternate.samefile(probe)
-            except OSError:
-                pass
             self.assertEqual(filesystem_case_sensitive(probe), not insensitive)
 
     def test_real_long_path_when_host_policy_allows_it(self):

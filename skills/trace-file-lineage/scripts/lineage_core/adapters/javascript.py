@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 from ..evidence import fact
 from ..identity import normalize_relative
 from .base import Candidate
 from .text import decode_native_path
-
 
 READ_CALLS = {"readFile", "readFileSync", "require", "import"}
 WRITE_CALLS = {"writeFile", "writeFileSync"}
@@ -110,7 +110,7 @@ def static_imports(tokens: list[Token]) -> list[tuple[str, int]]:
 
 class JavaScriptAdapter:
     name = "javascript"
-    suffixes = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
+    suffixes: ClassVar[set[str]] = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
 
     def inspect(self, path: Path, relative: str, root: Path) -> tuple[list[Candidate], dict, list[str]]:
         decoded = decode_native_path(path)

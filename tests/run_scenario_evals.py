@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
 import io
+import json
 import sys
 import time
 import unittest
 from pathlib import Path
-
 
 SCENARIOS = {
     "lost-research-figure": "scenarios.test_scenarios.ScenarioTests.test_01_lost_research_figure",

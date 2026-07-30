@@ -4,9 +4,10 @@ import difflib
 import json
 import sqlite3
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from .. import SCHEMA_VERSION
 from ..model import Edge, Evidence, Node
@@ -374,7 +375,7 @@ class Store:
     def close(self) -> None:
         self.connection.close()
 
-    def __enter__(self) -> "Store":
+    def __enter__(self) -> Store:
         return self
 
     def __exit__(self, *_: object) -> None:

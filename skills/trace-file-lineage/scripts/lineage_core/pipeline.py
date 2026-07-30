@@ -10,7 +10,6 @@ from .identity import normalize_relative
 from .storage import Store
 from .yaml_lite import StructuredDataError, load_structured
 
-
 DECLARATION_NAMES = (".file-lineage.yaml", ".file-lineage.yml", ".file-lineage.toml")
 
 

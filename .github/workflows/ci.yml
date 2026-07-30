@@ -5,6 +5,37 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install ruff
+        run: python -m pip install ruff
+      - name: Lint
+        run: ruff check --output-format github .
+      - name: Confirm no suppression lacks a reason
+        run: |
+          python - <<'PY'
+          import pathlib, re, sys
+          # A bare `# noqa: RULE` hides a finding without saying why. Require a
+          # trailing explanation so suppressions stay reviewable.
+          pattern = re.compile(r"#\s*noqa:\s*[A-Z]+[0-9,A-Z]*\s*$")
+          offenders = []
+          for path in pathlib.Path(".").rglob("*.py"):
+              if any(part in {".git", ".venv", "build", "dist"} for part in path.parts):
+                  continue
+              for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                  if pattern.search(line):
+                      offenders.append(f"{path}:{number}")
+          if offenders:
+              sys.exit("noqa without an explanation:\n" + "\n".join(offenders))
+          print("every suppression carries a reason")
+          PY
+
   core:
     name: Core / ${{ matrix.os }} / Python ${{ matrix.python }}
     strategy:

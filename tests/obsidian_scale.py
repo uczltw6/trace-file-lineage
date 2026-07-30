@@ -6,13 +6,11 @@ import tempfile
 import time
 from pathlib import Path
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = REPOSITORY_ROOT / "skills" / "trace-file-lineage" / "scripts"
 sys.path.insert(0, str(SOURCE_ROOT))
 
 from lineage_core.renderers.obsidian import export_obsidian
-
 
 NODE_COUNT = 10_000
 

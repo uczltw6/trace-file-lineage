@@ -11,7 +11,6 @@ from .evidence import fact
 from .model import Evidence
 from .privacy import sanitize_metadata
 
-
 PROV = "http://www.w3.org/ns/prov#"
 TFL = "https://trace-file-lineage.local/ns#"
 CONTEXT: dict[str, Any] = {
@@ -110,7 +109,7 @@ def export_prov_jsonld(graph: dict[str, Any]) -> dict[str, Any]:
     for edge in graph.get("edges", []):
         incoming.setdefault(str(edge.get("target_id")), []).append(edge)
     ranks: dict[str, int] = {}
-    for target, values in incoming.items():
+    for values in incoming.values():
         for rank, edge in enumerate(sorted(values, key=lambda item: (-float(item.get("score", 0)), str(item.get("id")))), 1):
             ranks[str(edge.get("id"))] = rank
 
@@ -258,7 +257,7 @@ def import_prov_jsonld(payload: dict[str, Any], source_path: str, *, trusted: bo
         return result
     key_by_prov: dict[str, str] = {}
     relation_items = []
-    for index, item in enumerate(graph):
+    for item in graph:
         if not isinstance(item, dict) or not item.get("@id"):
             continue
         types = _types(item)

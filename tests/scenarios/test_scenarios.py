@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import json
-import os
 import struct
 import sys
 import tempfile
-import time
 import unittest
 import zipfile
 from pathlib import Path
@@ -14,16 +13,14 @@ SKILL_SCRIPTS = Path(__file__).resolve().parents[2] / "skills" / "trace-file-lin
 sys.path.insert(0, str(SKILL_SCRIPTS))
 
 from lineage_core.capture import record, write_snapshot
-from lineage_core.clustering import build_clusters
-from lineage_core.config import Config, load_config
+from lineage_core.config import Config
 from lineage_core.evidence import fact
 from lineage_core.identity import normalize_relative
 from lineage_core.model import Edge
-from lineage_core.query import alternatives, impact, run_show, stale, why
+from lineage_core.query import alternatives, impact, run_show, why
 from lineage_core.renderers import export_obsidian, render_html, render_mermaid
 from lineage_core.scanner import scan
 from lineage_core.storage import Store
-
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + struct.pack(">II", 1, 1) + b"\x08\x06\x00\x00\x00" + b"fixture"
 
@@ -131,7 +128,7 @@ class ScenarioTests(unittest.TestCase):
         self.rescan()
         graph = self.store.graph()
         vault = self.root / "vault"
-        first = export_obsidian(graph, vault)
+        export_obsidian(graph, vault)
         second = export_obsidian(graph, vault)
         count = len(list(vault.glob("lineage-*.md")))
         self.assertEqual(count, len(graph["nodes"]))
@@ -167,10 +164,8 @@ class ScenarioTests(unittest.TestCase):
         write(self.root / "large.bin", b"x" * 1024)
         outside = Path(self.temp.name).parent / "outside-secret.txt"
         outside.write_text("secret", encoding="utf-8")
-        try:
+        with contextlib.suppress(OSError):
             (self.root / "outside-link").symlink_to(outside)
-        except OSError:
-            pass
         self.config.hash_max_bytes = 100
         result = self.rescan()
         paths = {item["path"] for item in self.store.files()}

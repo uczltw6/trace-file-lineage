@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from collections import deque
-from pathlib import Path
 from typing import Any
 
 from .identity import normalize_relative
-from .storage import Store
 from .scoring import evidence_priority
-
+from .storage import Store
 
 VERIFIED_CAUSAL_RELATIONS = {"was_generated_by", "confirmed_export"}
 PRODUCER_RELATIONS = VERIFIED_CAUSAL_RELATIONS | {
@@ -220,7 +218,7 @@ def stale(store: Store, path: str | None = None, minimum: float = 0.30, depth: i
             for edge in store.outgoing(current, minimum):
                 if edge.get("relation") not in STALE_RELATIONS:
                     continue
-                next_chain = chain + [edge]
+                next_chain = [*chain, edge]
                 target = store.file_by_id(edge["target_id"])
                 if not target or target["id"] == source["id"]:
                     continue

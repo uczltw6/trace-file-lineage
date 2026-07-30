@@ -7,7 +7,6 @@ from pathlib import Path
 
 from .origin import OriginRecord, get_xattr, origin_candidates
 
-
 WHERE_FROM_XATTR = "com.apple.metadata:kMDItemWhereFroms"
 
 

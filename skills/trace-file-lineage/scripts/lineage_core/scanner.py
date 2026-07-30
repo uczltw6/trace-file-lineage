@@ -5,13 +5,13 @@ import os
 import re
 import subprocess
 import time
-from datetime import datetime, timezone
+from collections.abc import Iterable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterable
 
 from .adapters import (
-    DVCAdapter,
     DocumentAdapter,
+    DVCAdapter,
     ImageAdapter,
     JavaScriptAdapter,
     OCRAdapter,
@@ -29,18 +29,17 @@ from .model import Edge, Evidence, Node, ScanResult, ScanWarning
 from .pipeline import discover_declarations
 from .storage import Store
 
-
 CATEGORY_BY_SUFFIX = {
-    **{suffix: "code" for suffix in {
+    **{suffix: "code" for suffix in (
         ".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd",
         ".sql", ".r", ".m", ".java", ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hxx", ".cs", ".go", ".rs",
         ".rb", ".php", ".swift", ".kt", ".kts", ".scala", ".sc", ".jl",
-    }},
+    )},
     ".ipynb": "notebook",
-    **{suffix: "data" for suffix in {".csv", ".tsv", ".parquet", ".feather", ".json", ".jsonl", ".sqlite", ".db", ".npy", ".npz", ".pkl"}},
-    **{suffix: "document" for suffix in {".docx", ".pptx", ".xlsx", ".pdf", ".odt", ".odp", ".ods", ".epub", ".md", ".rst", ".adoc", ".org", ".tex", ".html", ".htm", ".rtf", ".txt", ".log"}},
-    **{suffix: "image" for suffix in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".tif", ".tiff", ".bmp", ".svg"}},
-    **{suffix: "configuration" for suffix in {".toml", ".yaml", ".yml", ".ini", ".cfg", ".xml"}},
+    **{suffix: "data" for suffix in (".csv", ".tsv", ".parquet", ".feather", ".json", ".jsonl", ".sqlite", ".db", ".npy", ".npz", ".pkl")},
+    **{suffix: "document" for suffix in (".docx", ".pptx", ".xlsx", ".pdf", ".odt", ".odp", ".ods", ".epub", ".md", ".rst", ".adoc", ".org", ".tex", ".html", ".htm", ".rtf", ".txt", ".log")},
+    **{suffix: "image" for suffix in (".png", ".jpg", ".jpeg", ".gif", ".webp", ".tif", ".tiff", ".bmp", ".svg")},
+    **{suffix: "configuration" for suffix in (".toml", ".yaml", ".yml", ".ini", ".cfg", ".xml")},
 }
 DOCUMENT_INFERENCE_SUFFIXES = {
     ".docx", ".pptx", ".xlsx", ".odt", ".odp", ".ods", ".epub", ".md", ".html", ".htm", ".svg",
@@ -449,7 +448,7 @@ def scan(config: Config, store: Store, *, full: bool = False) -> ScanResult:
 def export_graph(config: Config, store: Store) -> Path:
     path = config.output_path / "graph.json"
     graph = store.graph()
-    graph["generated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    graph["generated_at"] = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
     graph["workspace_root"] = "."
     path.write_text(json.dumps(graph, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
     return path

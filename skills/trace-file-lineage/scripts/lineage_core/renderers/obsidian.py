@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import re
 from pathlib import Path
 from typing import Any
-
 
 MANIFEST = ".trace-file-lineage-export.json"
 INDEX = "File Lineage Index.md"
@@ -157,7 +156,8 @@ def export_obsidian(graph: dict[str, Any], destination: Path) -> dict[str, Any]:
                 f"run_finished_at: {_yaml(run.get('finished_at'))}",
             ]
         frontmatter += ["---", ""]
-        body = frontmatter + [
+        body = [
+            *frontmatter,
             f"# {_safe_label(node.get('label') or current_path or node_id)}",
             "",
             f"Current path: `{_safe_label(current_path)}`",

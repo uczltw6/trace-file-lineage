@@ -5,7 +5,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-
 OCR_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp"}
 OCR_SUFFIXES = OCR_IMAGE_SUFFIXES | {".pdf"}
 

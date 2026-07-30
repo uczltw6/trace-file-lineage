@@ -10,18 +10,17 @@ import unittest
 import zipfile
 from pathlib import Path
 
-
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "skills/trace-file-lineage/scripts"
 CLI = CORE / "lineage.py"
 sys.path.insert(0, str(CORE))
 
-from lineage_core.capture import pending_captures, record, run_command, write_snapshot  # noqa: E402
-from lineage_core.config import Config  # noqa: E402
-from lineage_core.query import receipt, reproduce, why  # noqa: E402
-from lineage_core.renderers.obsidian import export_obsidian  # noqa: E402
-from lineage_core.scanner import scan  # noqa: E402
-from lineage_core.storage import Store  # noqa: E402
+from lineage_core.capture import pending_captures, record, run_command, write_snapshot
+from lineage_core.config import Config
+from lineage_core.query import receipt, reproduce, why
+from lineage_core.renderers.obsidian import export_obsidian
+from lineage_core.scanner import scan
+from lineage_core.storage import Store
 
 
 class SchemaAndSemanticsTests(unittest.TestCase):
@@ -218,10 +217,9 @@ class SchemaAndSemanticsTests(unittest.TestCase):
                 self.assertNotEqual(store.file_by_path(target.name)["sha256"], original["sha256"])
 
     def test_sqlite_uses_wal_and_bounded_lock_wait(self):
-        with tempfile.TemporaryDirectory() as temp:
-            with Store(Path(temp) / "lineage.db") as store:
-                self.assertEqual(store.connection.execute("PRAGMA journal_mode").fetchone()[0], "wal")
-                self.assertEqual(store.connection.execute("PRAGMA busy_timeout").fetchone()[0], 5000)
+        with tempfile.TemporaryDirectory() as temp, Store(Path(temp) / "lineage.db") as store:
+            self.assertEqual(store.connection.execute("PRAGMA journal_mode").fetchone()[0], "wal")
+            self.assertEqual(store.connection.execute("PRAGMA busy_timeout").fetchone()[0], 5000)
 
     def test_confirm_reject_and_undo_are_persistent_and_authoritative(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -270,7 +268,7 @@ class RecoveryAndExporterTests(unittest.TestCase):
                 root = Path(temp)
                 env = dict(os.environ)
                 env["TRACE_FILE_LINEAGE_TEST_TERMINATE_AT"] = point
-                process = subprocess.run(
+                process = subprocess.run(  # noqa: PLW1510 - the exit code is the assertion
                     [
                         sys.executable,
                         str(CLI),
@@ -407,7 +405,7 @@ class PackagingConsistencyTests(unittest.TestCase):
         from lineage_core.cli import build_parser
 
         known: set[str] = set()
-        for action in build_parser()._subparsers._group_actions:  # noqa: SLF001
+        for action in build_parser()._subparsers._group_actions:
             known |= set(getattr(action, "choices", {}) or {})
         documented = set(re.findall(r"^lineage ([a-z][a-z-]*)", (REPO / "README.md").read_text(encoding="utf-8"), re.M))
         documented |= set(re.findall(r"`lineage ([a-z][a-z-]*)", (REPO / "README.md").read_text(encoding="utf-8")))

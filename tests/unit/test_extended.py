@@ -15,15 +15,15 @@ REPO = Path(__file__).resolve().parents[2]
 SKILL_SCRIPTS = REPO / "skills" / "trace-file-lineage" / "scripts"
 sys.path.insert(0, str(SKILL_SCRIPTS))
 
+from lineage_core.adapters.documents import inspect_pdf
+from lineage_core.adapters.text import TEXT_SUFFIXES
 from lineage_core.capabilities import capability_matrix
 from lineage_core.config import Config
 from lineage_core.evidence import fact
+from lineage_core.privacy import private_reference
 from lineage_core.scanner import scan
 from lineage_core.scoring import aggregate
 from lineage_core.storage import Store
-from lineage_core.adapters.text import TEXT_SUFFIXES
-from lineage_core.adapters.documents import inspect_pdf
-from lineage_core.privacy import private_reference
 
 
 def scan_root(root: Path, *, ocr: bool = False) -> tuple[dict, list[dict], list[dict]]:

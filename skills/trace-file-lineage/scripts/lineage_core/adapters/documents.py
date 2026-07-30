@@ -13,7 +13,6 @@ from ..evidence import fact
 from ..identity import normalize_relative
 from .base import Candidate
 
-
 DOCUMENT_SUFFIXES = {".docx", ".pptx", ".xlsx", ".pdf", ".odt", ".odp", ".ods", ".epub"}
 OFFICE_OPEN_XML = {".docx", ".pptx", ".xlsx"}
 OPEN_DOCUMENT = {".odt", ".odp", ".ods"}
@@ -60,9 +59,43 @@ def local_name(value: str) -> str:
     return value.rsplit("}", 1)[-1]
 
 
+#: How far into a part to look for a document type declaration. A DTD must appear
+#: in the prolog, so a bounded prescan is sufficient and avoids copying the part.
+DOCTYPE_SCAN_BYTES = 4096
+
+
+def _declares_doctype(data: bytes) -> bool:
+    """True when the prolog carries a DTD.
+
+    Office Open XML and OpenDocument both forbid a DTD in their parts, so the
+    only reason to find one is an attack. It matters because Python's
+    ElementTree does expand internal entities: a few kilobytes of nested
+    entities inside an otherwise valid archive expands to gigabytes in memory.
+    The archive limits enforced elsewhere bound the compressed bytes read, not
+    what those bytes expand to, so this is the layer that has to reject it.
+
+    External entities are already rejected by the parser, so this is about
+    resource exhaustion rather than data disclosure.
+    """
+    prolog = data[:DOCTYPE_SCAN_BYTES]
+    lowered = prolog.lower()
+    marker = lowered.find(b"<!doctype")
+    if marker == -1:
+        return False
+    # Ignore a match inside a comment, which is legal and harmless.
+    comment = lowered.rfind(b"<!--", 0, marker)
+    return comment == -1 or lowered.find(b"-->", comment, marker) != -1
+
+
 def xml_root(data: bytes, part: str, warnings: list[str]) -> ElementTree.Element | None:
+    if _declares_doctype(data):
+        warnings.append(
+            f"rejected XML part {part}: document type declarations are not permitted in "
+            "OOXML/ODF parts and can drive entity-expansion resource exhaustion"
+        )
+        return None
     try:
-        return ElementTree.fromstring(data)
+        return ElementTree.fromstring(data)  # noqa: S314 - DTDs rejected above; external entities are not resolved
     except ElementTree.ParseError as exc:
         warnings.append(f"malformed XML part {part}: {exc}")
         return None
@@ -90,7 +123,9 @@ def media_fingerprints(data: bytes) -> tuple[str, list[str]]:
                 header = f"{normalized.width}x{normalized.height}:RGBA:".encode()
                 pixel_digest = hashlib.sha256(header + normalized.tobytes()).hexdigest()
                 fingerprints.append(f"pixel-rgba-sha256:{pixel_digest}")
-        except Exception:
+        except Exception:  # noqa: S110 - arbitrary embedded bytes; Pillow raises many types
+            # The SHA-256 fingerprint above always succeeds, so losing the
+            # perceptual one degrades detail rather than failing the scan.
             pass
     return digest, sorted(set(fingerprints))
 
@@ -216,8 +251,10 @@ def inspect_ooxml(path: Path, suffix: str) -> tuple[str, dict[str, Any], list[st
         media, fingerprints = archive_media_info(archive, names, ("word/media/", "ppt/media/", "xl/media/"))
         structure["_embedded_media_fingerprints"] = fingerprints
         links = relationship_links(archive, names, warnings)
-        props = metadata_parts(archive, names, warnings)
-    return " ".join(text_parts), structure, media, links, warnings + ([] if props is not None else [])
+        # Called for its side effect: it appends any metadata warnings.
+        # This OOXML variant does not surface the properties themselves.
+        metadata_parts(archive, names, warnings)
+    return " ".join(text_parts), structure, media, links, warnings
 
 
 def inspect_odf(path: Path, suffix: str) -> tuple[str, dict[str, Any], list[str], list[str], list[str], dict[str, str]]:
@@ -336,10 +373,10 @@ def inspect_pdf(path: Path) -> tuple[str, dict[str, Any], list[str]]:
     except OSError as exc:
         return "", {"status": "metadata-only"}, [f"PDF read failed: {exc}"]
     if not data.startswith(b"%PDF-"):
-        return "", {"status": "corrupt-metadata-only", "parser": "literal-fallback"}, warnings + ["malformed PDF header; metadata-only fallback"]
+        return "", {"status": "corrupt-metadata-only", "parser": "literal-fallback"}, [*warnings, "malformed PDF header; metadata-only fallback"]
     if b"/Encrypt" in data:
-        return "", {"status": "encrypted-metadata-only", "parser": "literal-fallback", "encrypted": True}, warnings + [
-            "encrypted or password-protected PDF; metadata-only fallback"
+        return "", {"status": "encrypted-metadata-only", "parser": "literal-fallback", "encrypted": True}, [
+            *warnings, "encrypted or password-protected PDF; metadata-only fallback"
         ]
     text = " ".join(item.decode("latin-1", "ignore") for item in re.findall(rb"\(([^()]*)\)\s*Tj", data))
     structure["status"] = "degraded-literal-text" if text else "no-native-text"

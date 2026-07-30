@@ -8,7 +8,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 REPO = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = REPO / "skills" / "trace-file-lineage" / "scripts"
 
@@ -115,15 +114,15 @@ class HelpDiscoverabilityTests(unittest.TestCase):
 
         actions = [
             action
-            for action in build_parser()._subparsers._group_actions  # noqa: SLF001 - argparse has no public API
+            for action in build_parser()._subparsers._group_actions
             if hasattr(action, "choices")
         ]
         undocumented = sorted(
             name
             for action in actions
             for name, parser in action.choices.items()
-            if not (action._choices_actions and any(  # noqa: SLF001
-                entry.dest == name and entry.help for entry in action._choices_actions  # noqa: SLF001
+            if not (action._choices_actions and any(
+                entry.dest == name and entry.help for entry in action._choices_actions
             ))
         )
         self.assertEqual(undocumented, [], f"subcommands missing help=: {undocumented}")

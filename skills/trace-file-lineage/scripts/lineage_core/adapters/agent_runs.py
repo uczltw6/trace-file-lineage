@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
-from .base import AdapterResult, NormalizedEdge, NormalizedNode
 from ..capture import redact_command
 from ..evidence import fact
 from ..identity import normalize_relative
 from ..privacy import private_reference, safe_summary, sanitize_metadata
-
+from .base import AdapterResult, NormalizedEdge, NormalizedNode
 
 ALLOWED_STATUSES = {"completed", "complete", "interrupted", "recovered", "incomplete", "in_progress"}
 

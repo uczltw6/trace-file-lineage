@@ -17,7 +17,6 @@ from .model import Edge, Node
 from .privacy import git_state, private_reference, safe_summary, sanitize_metadata
 from .storage import Store
 
-
 REDACT_ARG = re.compile(r"(?i)(password|passwd|token|secret|api[-_]?key|authorization)(=|:)(.+)")
 SENSITIVE_FLAG = re.compile(r"(?i)^--?(password|passwd|token|secret|api[-_]?key|authorization)$")
 URL_CREDENTIAL = re.compile(r"(?i)([a-z][a-z0-9+.-]*://[^:/\s]+:)([^@/\s]+)(@)")

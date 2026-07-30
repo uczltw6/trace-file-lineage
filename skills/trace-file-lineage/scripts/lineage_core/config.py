@@ -7,7 +7,6 @@ from pathlib import Path
 
 from .identity import normalize_relative
 
-
 DEFAULT_EXCLUDES = [
     ".git/**",
     ".file-lineage/**",

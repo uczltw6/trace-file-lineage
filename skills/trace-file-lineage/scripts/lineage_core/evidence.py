@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
-from typing import Any
 import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 from .model import Evidence
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def fact(
