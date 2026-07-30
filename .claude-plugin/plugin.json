@@ -13,5 +13,15 @@
     "artifacts",
     "forensics"
   ],
-  "hooks": "./platforms/claude-code/hooks.json"
+  "hooks": "./platforms/claude-code/hooks.json",
+  "contributors": [
+    {
+      "name": "tianyiwei",
+      "url": "https://github.com/uczltw6"
+    },
+    {
+      "name": "Claudia Chen",
+      "url": "https://github.com/ClaudiaChen04"
+    }
+  ]
 }

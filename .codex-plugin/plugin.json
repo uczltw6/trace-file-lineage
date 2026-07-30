@@ -18,7 +18,7 @@
     "displayName": "Trace File Lineage",
     "shortDescription": "Trace artifact origins, impact, and task runs.",
     "longDescription": "Investigate where local files came from, rank historical producer candidates with explicit uncertainty, record future task changes, and export focused lineage views.",
-    "developerName": "tianyiwei",
+    "developerName": "tianyiwei and Claudia Chen",
     "category": "Productivity",
     "capabilities": [
       "Local analysis",
@@ -29,5 +29,15 @@
       "Show what depends on this input file.",
       "Explain the files created by this recorded run."
     ]
-  }
+  },
+  "contributors": [
+    {
+      "name": "tianyiwei",
+      "url": "https://github.com/uczltw6"
+    },
+    {
+      "name": "Claudia Chen",
+      "url": "https://github.com/ClaudiaChen04"
+    }
+  ]
 }

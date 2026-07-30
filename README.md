@@ -249,6 +249,10 @@ lineage demo                                          # see it work
 python -m unittest discover -s tests -p 'test_*.py'   # run the tests
 ```
 
+## Authors
+
+[tianyiwei](https://github.com/uczltw6) and [Claudia Chen](https://github.com/ClaudiaChen04) — see [AUTHORS.md](AUTHORS.md).
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
