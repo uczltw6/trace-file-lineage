@@ -57,6 +57,20 @@ schema or CLI contracts with migration guidance.
 
 ### Added
 
+- **`lineage demo`** builds a small sample project, records a real wrapped run, and shows
+  the verified answer beside the candidate one. The distinction between proof and
+  educated guess is the core of the product and was previously only explained in prose.
+  It refuses to write into a non-empty directory without `--force` and never touches the
+  working directory.
+- **Scan progress on stderr.** A cold scan of 10,000 files takes about 43 seconds and
+  previously produced no output at all, which reads as a hang. `--progress auto` stays
+  silent when stderr is not a terminal, so stdout keeps carrying only results.
+- **Scans report which directories they skipped**, so it is visible that `node_modules`
+  and virtual environments were left out. The tool's own index and `.git` are filtered
+  from that list as noise.
+- **Publication material** in `docs/release/`: v0.7.0 release notes, eight draft issues,
+  and the repository settings that need an account to apply.
+
 - **A real graph in the HTML explorer.** `lineage open` now renders a force-directed
   SVG graph with pan, zoom, node dragging, click-to-inspect evidence, search, relation
   and assurance filters, and a legend. Captured relationships are solid; inferred ones
@@ -82,7 +96,6 @@ schema or CLI contracts with migration guidance.
   this changelog, GitHub issue and pull request templates, and `docs/` covering the CLI,
   adapters, installation, limitations, and compatibility.
 - **PyPI metadata**: long description, classifiers, keywords, and project URLs.
-
 - **An honest comparison with Git, DVC, OpenLineage, MLflow, and Weights & Biases**
   in `docs/comparison.md`, including an explicit list of situations where you should
   use something else or nothing at all.
@@ -102,6 +115,13 @@ schema or CLI contracts with migration guidance.
 
 ### Changed
 
+- **Attribution names tianyiwei alone** in `pyproject.toml` and both plugin manifests,
+  replacing the placeholder "Trace File Lineage Contributors". No email is included,
+  since `pyproject` metadata is published verbatim to PyPI.
+- **The README states what each of its two modes gives you**, rather than one promise
+  that reads as covering both. Retrospective answers are ranked guesses with evidence;
+  prospective answers are proof. Positioning is narrowed to Python, notebooks, research
+  code, and agent artifacts, and the optional integrations moved out of the main flow.
 - **`doctor` now prints a readable report by default.** It previously emitted raw JSON.
   Use `doctor --format json` for the complete machine-readable ledger.
 - **The README is a fifth of its previous length**, leads with the agent-run scenario,
