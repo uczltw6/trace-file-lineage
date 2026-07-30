@@ -88,6 +88,7 @@ class ScanResult:
     renamed: int = 0
     edges: int = 0
     warnings: list[ScanWarning] = field(default_factory=list)
+    skipped_directories: list[str] = field(default_factory=list)
     duration_seconds: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:

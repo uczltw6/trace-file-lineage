@@ -6,7 +6,9 @@ import json
 import os
 import shutil
 import sys
+import time
 import webbrowser
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +25,7 @@ from .capabilities import (
 from .capture import pending_captures, record, recover_capture, run_command, write_snapshot
 from .clustering import build_clusters
 from .config import Config, load_config
+from .demo import run_demo
 from .evidence import fact, now
 from .external import apply_adapter_result
 from .model import Edge
@@ -54,6 +57,36 @@ def emit(value: Any, fmt: str = "json") -> None:
         print(render_mermaid(value), end="")
 
 
+PROGRESS_INTERVAL_SECONDS = 0.2
+
+
+def make_progress_reporter(mode: str) -> Callable[[int, int], None] | None:
+    """Report scan progress on stderr, leaving stdout free for results.
+
+    A cold scan of a large workspace takes tens of seconds; without this it is
+    indistinguishable from a hang. `auto` stays silent when stderr is redirected
+    so logs and pipelines do not fill with carriage returns.
+    """
+    if mode == "never":
+        return None
+    if mode == "auto" and not sys.stderr.isatty():
+        return None
+
+    state = {"last": 0.0}
+
+    def report(done: int, total: int) -> None:
+        moment = time.monotonic()
+        finished = total <= 0 or done >= total
+        if not finished and moment - state["last"] < PROGRESS_INTERVAL_SECONDS:
+            return
+        state["last"] = moment
+        percent = 100 if total <= 0 else int(done * 100 / total)
+        ending = "\n" if finished else ""
+        print(f"\rscanning {done}/{max(total, done)} files ({percent}%)", end=ending, file=sys.stderr, flush=True)
+
+    return report
+
+
 def open_store(root: Path):
     config = load_config(root)
     config.output_path.mkdir(parents=True, exist_ok=True)
@@ -73,7 +106,11 @@ def cmd_scan(args: argparse.Namespace) -> int:
     try:
         if getattr(args, "ocr", False):
             config.ocr_enabled = True
-        result = scan(config, store, full=getattr(args, "full", False))
+        result = scan(
+            config, store,
+            full=getattr(args, "full", False),
+            progress=make_progress_reporter(getattr(args, "progress", "auto")),
+        )
         graph_path = export_graph(config, store)
         overview = config.output_path / "overview.md"
         overview.write_text(render_overview(store.graph()), encoding="utf-8")
@@ -90,7 +127,11 @@ def refresh_index(config: Config, store: Store, args: argparse.Namespace) -> dic
         return None
     if getattr(args, "ocr", False):
         config.ocr_enabled = True
-    return scan(config, store, full=getattr(args, "full", False)).to_dict()
+    return scan(
+        config, store,
+        full=getattr(args, "full", False),
+        progress=make_progress_reporter(getattr(args, "progress", "auto")),
+    ).to_dict()
 
 
 def cmd_explain(args: argparse.Namespace) -> int:
@@ -302,6 +343,10 @@ def cmd_import(args: argparse.Namespace) -> int:
         return 0
     finally:
         store.close()
+
+
+def cmd_demo(args: argparse.Namespace) -> int:
+    return run_demo(Path(args.path).expanduser().resolve(), force=args.force)
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -539,6 +584,7 @@ SUBCOMMAND_HELP = {
     "run": "wrap a command, record what it changed, and preserve its exit code",
     "export": "write JSON, W3C PROV, Markdown, Mermaid, HTML, or Obsidian views",
     "doctor": "report versions, optional dependencies, and format capabilities",
+    "demo": "build a small sample project and trace it, to see how this works",
 }
 
 
@@ -548,6 +594,7 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Trace file origins, downstream impact, and captured task changes locally.\n\n"
             "Start here:\n"
+            "  lineage demo            build a sample project and trace it\n"
             "  lineage explain FILE    where did this artifact come from?\n"
             "  lineage open            browse the whole graph in a local HTML explorer\n"
             "  lineage run -- CMD      record what a command changed\n"
@@ -564,6 +611,8 @@ def build_parser() -> argparse.ArgumentParser:
     scan_parser.add_argument("--format", choices=["json", "markdown"], default="json")
     scan_parser.add_argument("--ocr", action="store_true", help="enable optional local OCR for this scan")
     scan_parser.add_argument("--full", action="store_true", help="rehash and re-extract every in-scope file even when size and mtime are unchanged")
+    scan_parser.add_argument("--progress", choices=["auto", "always", "never"], default="auto",
+        help="report scan progress on stderr; auto means only when attached to a terminal")
     scan_parser.set_defaults(handler=cmd_scan)
     explain = sub.add_parser("explain", help="refresh the index and explain one artifact in a single command")
     explain.add_argument("file")
@@ -574,6 +623,8 @@ def build_parser() -> argparse.ArgumentParser:
     explain.add_argument("--no-scan", action="store_true", help="query the current index without refreshing it")
     explain.add_argument("--full", action="store_true", help="force content rehash/re-extraction before explaining")
     explain.add_argument("--ocr", action="store_true", help="enable optional local OCR during the refresh")
+    explain.add_argument("--progress", choices=["auto", "always", "never"], default="auto",
+        help="report scan progress on stderr; auto means only when attached to a terminal")
     explain.set_defaults(handler=cmd_explain)
     open_parser = sub.add_parser("open", help="refresh, render, and open the local HTML lineage explorer")
     open_parser.add_argument("--root", default=".")
@@ -582,6 +633,8 @@ def build_parser() -> argparse.ArgumentParser:
     open_parser.add_argument("--no-scan", action="store_true", help="render the current index without refreshing it")
     open_parser.add_argument("--full", action="store_true", help="force content rehash/re-extraction before rendering")
     open_parser.add_argument("--ocr", action="store_true", help="enable optional local OCR during the refresh")
+    open_parser.add_argument("--progress", choices=["auto", "always", "never"], default="auto",
+        help="report scan progress on stderr; auto means only when attached to a terminal")
     open_parser.add_argument("--no-launch", action="store_true", help="render the explorer without launching a browser")
     open_parser.set_defaults(handler=cmd_open)
     rebuild = sub.add_parser("rebuild", help="safely rebuild only .file-lineage/lineage.db")
@@ -715,6 +768,10 @@ def build_parser() -> argparse.ArgumentParser:
     rescore.add_argument("--root", default=".")
     rescore.add_argument("--format", choices=["json"], default="json")
     rescore.set_defaults(handler=cmd_rescore)
+    demo = sub.add_parser("demo", help=SUBCOMMAND_HELP["demo"])
+    demo.add_argument("--path", default="./lineage-demo", help="where to build the demo project")
+    demo.add_argument("--force", action="store_true", help="use the directory even if it is not empty")
+    demo.set_defaults(handler=cmd_demo)
     doctor = sub.add_parser("doctor", help=SUBCOMMAND_HELP["doctor"])
     doctor.add_argument("--root", default=".")
     doctor.add_argument("--format", choices=["markdown", "json"], default="markdown")

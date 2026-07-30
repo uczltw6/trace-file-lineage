@@ -3,7 +3,8 @@
   "description": "Local-first provenance and artifact navigation for files produced by code, documents, commands, and agent tasks.",
   "version": "0.7.0",
   "author": {
-    "name": "Trace File Lineage Contributors"
+    "name": "tianyiwei",
+    "url": "https://github.com/uczltw6"
   },
   "license": "MIT",
   "keywords": [

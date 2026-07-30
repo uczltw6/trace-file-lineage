@@ -10,7 +10,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [{name = "Trace File Lineage Contributors"}]
+authors = [{name = "tianyiwei"}]
+maintainers = [{name = "tianyiwei"}]
 keywords = [
   "provenance",
   "lineage",

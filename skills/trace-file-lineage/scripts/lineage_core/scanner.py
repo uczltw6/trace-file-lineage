@@ -5,7 +5,7 @@ import os
 import re
 import subprocess
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -51,7 +51,9 @@ def categorize(path: Path) -> str:
     return CATEGORY_BY_SUFFIX.get(path.suffix.lower(), "file")
 
 
-def iter_files(config: Config) -> Iterable[tuple[Path, str]]:
+def iter_files(config: Config, skipped: set[str] | None = None) -> Iterable[tuple[Path, str]]:
+    """Walk the workspace. `skipped` collects excluded directory names, so a scan
+    can tell the user what it left out instead of silently ignoring it."""
     root = config.root
     for directory, dirnames, filenames in os.walk(root, followlinks=config.follow_symlinks):
         base = Path(directory)
@@ -69,6 +71,8 @@ def iter_files(config: Config) -> Iterable[tuple[Path, str]]:
                 continue
             if not config.excluded(relative, is_dir=True):
                 kept.append(name)
+            elif skipped is not None:
+                skipped.add(name)
         dirnames[:] = kept
         for name in sorted(filenames):
             path = base / name
@@ -255,12 +259,20 @@ def reconcile_virtual_paths(store: Store) -> None:
         store.connection.execute("UPDATE files SET deleted=1 WHERE id=?", (item["id"],))
 
 
-def scan(config: Config, store: Store, *, full: bool = False) -> ScanResult:
+def scan(
+    config: Config,
+    store: Store,
+    *,
+    full: bool = False,
+    progress: Callable[[int, int], None] | None = None,
+) -> ScanResult:
     started = time.perf_counter()
     result = ScanResult(root=".", full_rehash=full)
     seen_at = now()
     existing = {item["path"]: item for item in store.files() if not item["path"].startswith("@")}
-    entries = list(iter_files(config))
+    skipped_directories: set[str] = set()
+    entries = list(iter_files(config, skipped_directories))
+    total = len(entries)
     current_paths = {relative for _, relative in entries}
     missing = {path: item for path, item in existing.items() if path not in current_paths}
     git_token = git_history_token(config.root)
@@ -280,6 +292,8 @@ def scan(config: Config, store: Store, *, full: bool = False) -> ScanResult:
     with store.transaction():
         for path, relative in entries:
             result.scanned += 1
+            if progress is not None:
+                progress(result.scanned, total)
             try:
                 stat = path.stat()
             except OSError as exc:
@@ -441,6 +455,9 @@ def scan(config: Config, store: Store, *, full: bool = False) -> ScanResult:
 
     store.set_meta("last_scan_at", seen_at)
     store.set_meta("git_history_token", git_token)
+    # Report only skips a user might want to reconsider. The tool's own index and
+    # the Git directory are structural, and listing them is noise.
+    result.skipped_directories = sorted(skipped_directories - {config.output_dir, ".git"})
     result.duration_seconds = round(time.perf_counter() - started, 6)
     return result
 
