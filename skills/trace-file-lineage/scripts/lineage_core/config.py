@@ -62,6 +62,7 @@ class Config:
     platform_gvfs_fallback: bool = False
     redaction_patterns: list[str] = field(default_factory=lambda: list(SECRET_PATTERNS))
     visualization_limit: int = 80
+    explorer_edge_limit: int = 1500
 
     @property
     def output_path(self) -> Path:
@@ -110,6 +111,7 @@ def load_config(root: Path) -> Config:
         "platform_gvfs_fallback",
         "redaction_patterns",
         "visualization_limit",
+        "explorer_edge_limit",
     ):
         if key in section:
             setattr(config, key, section[key])
