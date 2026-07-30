@@ -211,11 +211,16 @@ declared in advance, and this records *evidence* — including for work nobody p
 to track. Full comparison, including when **not** to use this:
 [docs/comparison.md](docs/comparison.md).
 
-## Integrations
+## Integrations — experimental
 
-Optional, none required: import and export [W3C PROV](docs/adapters.md), read
-`dvc.yaml`, read OpenLineage events, import an external code graph, and export to
-Obsidian. Ignore all of it if you don't need it.
+These exist, are tested against fixtures, and are **not** part of the core promise:
+import and export [W3C PROV](docs/adapters.md), read `dvc.yaml`, read OpenLineage
+events, import an external code graph, export to Obsidian.
+
+They have fixture-level coverage only and have not been validated against real
+third-party pipelines. Treat them as a starting point rather than a compatibility
+guarantee, and ignore all of it if you don't need it. The core — tracing files in
+your workspace — does not depend on any of them.
 
 ---
 
@@ -224,6 +229,11 @@ Obsidian. Ignore all of it if you don't need it.
 **Early release (0.7.0).** Tested on Python 3.11–3.14 across macOS, Linux, and
 Windows — all twelve combinations green in CI, plus coverage, linting, and real
 PDF/OCR fixtures. Commands may still change.
+
+Run against three externally-authored repositories, with the results and the
+defect it uncovered written up in
+[docs/real-world-validation.md](docs/real-world-validation.md) — including what
+those runs do **not** establish.
 
 Known limits are written down rather than glossed over:
 [docs/limitations.md](docs/limitations.md).

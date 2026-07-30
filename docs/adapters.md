@@ -68,6 +68,18 @@ steps:
 YAML support intentionally covers the safe pipeline/DVC subset. It is not a general
 YAML parser.
 
+## Maturity of the interoperability adapters
+
+Everything from here down is **experimental**. Each adapter has fixture-level test
+coverage and none has been validated against a real third-party deployment. They
+normalize into the same evidence graph and never replace it, so a broken or absent
+adapter leaves the built-in scan fully operational — but do not read their presence
+as a compatibility claim about DVC, any OpenLineage backend, any code indexer, or
+any Obsidian version.
+
+The core capability — scanning a workspace and ranking origins — has no dependency
+on any of them.
+
 ## W3C PROV
 
 ```bash

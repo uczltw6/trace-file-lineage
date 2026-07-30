@@ -69,6 +69,15 @@ schema or CLI contracts with migration guidance.
   have produced extra artifacts, inflating its changed-file list. Coverage data files,
   `htmlcov/`, `.ruff_cache/`, and `*.egg-info/` are now excluded by default.
 
+### Changed
+
+- **The interoperability adapters are labelled experimental.** PROV, DVC,
+  OpenLineage, codegraph, and Obsidian export each have fixture-level coverage and
+  none has been validated against a real third-party deployment. Presenting them
+  alongside the core capability implied a maturity they do not have. No code was
+  removed — they are demoted in the README and carry an explicit maturity statement
+  in `docs/adapters.md`.
+
 ### Added
 
 - **`lineage demo`** builds a small sample project, records a real wrapped run, and shows
