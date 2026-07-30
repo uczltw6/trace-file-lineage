@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/uczltw6/trace-file-lineage/security/advisories/new
+    about: Report privately. Please do not open a public issue.
+  - name: Question or idea
+    url: https://github.com/uczltw6/trace-file-lineage/discussions
+    about: Ask how something works or float an idea before filing an issue.

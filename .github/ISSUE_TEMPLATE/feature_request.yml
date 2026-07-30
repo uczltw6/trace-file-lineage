@@ -1,0 +1,50 @@
+name: Feature request
+description: Suggest a capability, adapter, or query
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Three project properties are load-bearing, and proposals that conflict with them
+        need discussion first: the core has **zero required dependencies**, scanning
+        **never executes project code**, and captured evidence **never mixes** with
+        inference. See [docs/limitations.md](../blob/main/docs/limitations.md).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What can't you do today?
+      description: Describe the situation, not the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like it to do?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - New format or language adapter
+        - New query or CLI command
+        - HTML explorer / visualization
+        - Interoperability (PROV, DVC, OpenLineage, code graph)
+        - Agent host integration (Claude Code, Codex, other)
+        - Scoring and assurance
+        - Performance
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds you have tried
+    validations:
+      required: false

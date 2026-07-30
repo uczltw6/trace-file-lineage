@@ -1,0 +1,70 @@
+name: Bug report
+description: Something behaved incorrectly or crashed
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not attach workspace contents, credentials, or a real
+        `.file-lineage/lineage.db` — it can contain extracted text from your files.
+        A minimal redacted fixture is much more useful.
+
+        For a suspected security vulnerability, use
+        [private reporting](https://github.com/uczltw6/trace-file-lineage/security/advisories/new)
+        instead of this form.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command
+      render: shell
+      placeholder: lineage explain figures/final_panel.png --root .
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output or traceback
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: lineage doctor output
+      description: Run `lineage doctor` and paste the result.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: |
+        The smallest set of files that triggers this. File names and shapes matter more
+        than contents — placeholder contents are fine.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true

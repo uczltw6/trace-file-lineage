@@ -19,10 +19,15 @@ verify that its child command changed an artifact version; it still does not nam
 an internal writer function.
 
 Set `LINEAGE` to `<skill-dir>/scripts/lineage.py` in the POSIX examples below.
-On every desktop platform, an installed core may instead use
-`python -m lineage_core`; in PowerShell use `py -3 $Lineage ...`. Do not assume
-Bash or a POSIX separator. Build filesystem paths with `pathlib`, pass child
-arguments as arrays, and never request shell interpolation.
+An installed package instead provides the `lineage` command (and the equivalent
+`python -m lineage_core`), which is preferable when available; in PowerShell use
+`py -3 $Lineage ...`. Do not assume Bash or a POSIX separator. Build filesystem
+paths with `pathlib`, pass child arguments as arrays, and never request shell
+interpolation.
+
+Query commands default to Markdown and accept `--format json` when you need to
+parse the result. `doctor` also defaults to a readable report; use
+`doctor --format json` for the complete machine-readable capability ledger.
 
 ## Retrospective forensics
 
