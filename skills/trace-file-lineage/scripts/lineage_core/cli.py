@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .activation import disable as activation_disable
+from .activation import enable as activation_enable
+from .activation import render_status
+from .activation import status as activation_status
 from .adapters import AgentRunAdapter, CodeGraphAdapter, DVCAdapter, OpenLineageAdapter
 from .capabilities import (
     capability_matrix,
@@ -345,6 +349,35 @@ def cmd_import(args: argparse.Namespace) -> int:
         store.close()
 
 
+def cmd_enable(args: argparse.Namespace) -> int:
+    payload = activation_enable(Path(args.root).expanduser().resolve())
+    if args.format == "json":
+        emit(payload)
+    else:
+        actions = ", ".join(f"{item['path']} ({item['action']})" for item in payload["memory_files"])
+        print(f"Continuous mode enabled. The agent is now required to record every task.\n  {actions}")
+    return 0
+
+
+def cmd_disable(args: argparse.Namespace) -> int:
+    payload = activation_disable(Path(args.root).expanduser().resolve())
+    if args.format == "json":
+        emit(payload)
+    else:
+        actions = ", ".join(f"{item['path']} ({item['action']})" for item in payload["memory_files"])
+        print(f"Continuous mode disabled.\n  {actions}")
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    payload = activation_status(Path(args.root).expanduser().resolve())
+    if args.format == "json":
+        emit(payload)
+    else:
+        print(render_status(payload), end="")
+    return 0
+
+
 def cmd_demo(args: argparse.Namespace) -> int:
     return run_demo(Path(args.path).expanduser().resolve(), force=args.force)
 
@@ -585,6 +618,9 @@ SUBCOMMAND_HELP = {
     "export": "write JSON, W3C PROV, Markdown, Mermaid, HTML, or Obsidian views",
     "doctor": "report versions, optional dependencies, and format capabilities",
     "demo": "build a small sample project and trace it, to see how this works",
+    "enable": "require the agent to record lineage after every task in this project",
+    "disable": "stop requiring per-task lineage records in this project",
+    "status": "show whether continuous mode is on and whether an index exists",
 }
 
 
@@ -595,6 +631,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Trace file origins, downstream impact, and captured task changes locally.\n\n"
             "Start here:\n"
             "  lineage demo            build a sample project and trace it\n"
+            "  lineage enable          make the agent record every task from now on\n"
             "  lineage explain FILE    where did this artifact come from?\n"
             "  lineage open            browse the whole graph in a local HTML explorer\n"
             "  lineage run -- CMD      record what a command changed\n"
@@ -768,6 +805,11 @@ def build_parser() -> argparse.ArgumentParser:
     rescore.add_argument("--root", default=".")
     rescore.add_argument("--format", choices=["json"], default="json")
     rescore.set_defaults(handler=cmd_rescore)
+    for name, handler in (("enable", cmd_enable), ("disable", cmd_disable), ("status", cmd_status)):
+        child = sub.add_parser(name, help=SUBCOMMAND_HELP[name])
+        child.add_argument("--root", default=".")
+        child.add_argument("--format", choices=["markdown", "json"], default="markdown")
+        child.set_defaults(handler=handler)
     demo = sub.add_parser("demo", help=SUBCOMMAND_HELP["demo"])
     demo.add_argument("--path", default="./lineage-demo", help="where to build the demo project")
     demo.add_argument("--force", action="store_true", help="use the directory even if it is not empty")
