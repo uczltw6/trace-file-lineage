@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -391,13 +392,37 @@ class PackagingConsistencyTests(unittest.TestCase):
 
         pattern = re.compile(r"\[[^\]]+\]\((?!https?://|mailto:|#)([^)#\s]+)")
         broken: list[str] = []
-        documents = [REPO / name for name in ("README.md", "CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md")]
+        documents = sorted(REPO.glob("README*.md"))
+        documents += [REPO / name for name in ("CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md", "AUTHORS.md")]
         documents += sorted((REPO / "docs").glob("*.md"))
         for document in documents:
             for target in pattern.findall(document.read_text(encoding="utf-8")):
                 if not (document.parent / target).exists():
                     broken.append(f"{document.name} -> {target}")
         self.assertEqual(broken, [], f"broken relative links: {broken}")
+
+    def test_every_readme_translation_links_back_to_the_others(self):
+        """A language switcher that points at a missing file is worse than none."""
+        readmes = sorted(REPO.glob("README*.md"))
+        self.assertGreater(len(readmes), 1, "expected at least one translation")
+        for document in readmes:
+            text = document.read_text(encoding="utf-8")
+            for other in readmes:
+                self.assertIn(
+                    other.name, text,
+                    f"{document.name} does not link to {other.name}",
+                )
+
+    def test_readme_header_images_exist(self):
+        for document in sorted(REPO.glob("README*.md")):
+            text = document.read_text(encoding="utf-8")
+            for asset in re.findall(r'srcset="([^"]+)"', text) + re.findall(r'<img[^>]+src="([^"]+)"', text):
+                if asset.startswith("http"):
+                    continue
+                self.assertTrue(
+                    (REPO / asset).is_file(),
+                    f"{document.name} references a missing image: {asset}",
+                )
 
     def test_readme_does_not_document_a_command_the_cli_lacks(self):
         import re

@@ -71,6 +71,20 @@ schema or CLI contracts with migration guidance.
 
 ### Changed
 
+- **The README has a header image and a language switcher.** Measured against seven
+  READMEs between 33k and 88k stars: 7 of 7 lead with an image in the header, 6 of 7
+  centre that header block, and 6 of 7 include a recording or demo. This project had
+  none of those. Two of the seven offer language links, which is a minority pattern in
+  general but worth it here.
+- **`docs/assets/render_terminal_svg.py`** renders captured terminal output as a
+  self-contained SVG, so the header image is generated from real `lineage demo` output
+  rather than drawn. Re-running it after an output change regenerates the picture. Light
+  and dark variants are selected with `<picture>`.
+- **`README-zh.md`** is a full translation, not a summary. Guards now fail if a
+  translation stops linking to its siblings or references a missing header image.
+
+
+
 - **The interoperability adapters are labelled experimental.** PROV, DVC,
   OpenLineage, codegraph, and Obsidian export each have fixture-level coverage and
   none has been validated against a real third-party deployment. Presenting them

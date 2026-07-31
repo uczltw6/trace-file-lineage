@@ -1,15 +1,29 @@
+<div align="center">
+
 # Trace File Lineage
 
 **Find out which script, notebook, data file, command, or AI agent produced a file —
 locally, with evidence, and with honest uncertainty.**
 
-Built for Python and notebook work: research code, data analysis, and the piles of
-files AI coding agents now generate.
+[📖 Docs](docs/skill.md) • [🎯 Views](docs/skill.md#choosing-a-view) • [⚖️ vs DVC / Git](docs/comparison.md) • [📊 Real-world results](docs/real-world-validation.md)
 
 [![CI](https://github.com/uczltw6/trace-file-lineage/actions/workflows/ci.yml/badge.svg)](https://github.com/uczltw6/trace-file-lineage/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/trace-file-lineage)](https://pypi.org/project/trace-file-lineage/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%20%E2%80%93%203.14-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+[English](README.md) • [简体中文](README-zh.md)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/demo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/demo-light.svg">
+  <img alt="lineage demo showing a verified answer beside a candidate one" src="docs/assets/demo-dark.svg" width="720">
+</picture>
+
+</div>
+
+Built for Python and notebook work: research code, data analysis, and the piles of
+files AI coding agents now generate.
 
 ```bash
 pip install trace-file-lineage
@@ -17,7 +31,8 @@ lineage demo
 ```
 
 `lineage demo` builds a small project, records a run, and shows you the answer — under
-a second, nothing to configure, and it writes only into `./lineage-demo`.
+a second, nothing to configure, and it writes only into `./lineage-demo`. The image
+above is that command's real output.
 
 ---
 
