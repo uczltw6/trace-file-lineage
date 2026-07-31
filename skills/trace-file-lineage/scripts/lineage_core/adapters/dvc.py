@@ -52,7 +52,10 @@ class DVCAdapter:
     name = "dvc"
 
     def load(self, source: Path, root: Path, *, trusted: bool = False) -> AdapterResult:
-        manifest = source if source.is_file() else source / "dvc.yaml"
+        # Only a directory gets `dvc.yaml` appended. Testing `is_file()` meant a
+        # path that simply does not exist was treated as a directory, producing
+        # "not found: absent.yaml/dvc.yaml" — a path the user never mentioned.
+        manifest = source / "dvc.yaml" if source.is_dir() else source
         result = AdapterResult(self.name, metadata={"source": normalize_relative(manifest, root)})
         if not manifest.exists():
             result.warnings.append(f"DVC manifest not found: {manifest}")

@@ -3,8 +3,18 @@ from __future__ import annotations
 from typing import Any
 
 
-def _path(node: dict[str, Any] | None) -> str:
-    return f"`{node.get('path', node.get('label', '?'))}`" if node else "`?`"
+def _path(node: dict[str, Any] | str | None) -> str:
+    """Render a node reference, whether it arrived as a node or as a bare path.
+
+    A not-found result carries the requested path as a plain string rather than a
+    resolved node, and assuming a dict here crashed the renderer — which surfaced
+    as exit 70, the code reserved for an internal bug.
+    """
+    if not node:
+        return "`?`"
+    if isinstance(node, str):
+        return f"`{node}`"
+    return f"`{node.get('path', node.get('label', '?'))}`"
 
 
 def _evidence(edge: dict[str, Any]) -> str:

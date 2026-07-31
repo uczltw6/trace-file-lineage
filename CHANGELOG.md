@@ -35,6 +35,21 @@ schema or CLI contracts with migration guidance.
   on that corpus none of the affected cells performed file I/O, so no new lineage
   edges were recovered. See [docs/real-world-validation.md](docs/real-world-validation.md).
 
+- **`impact` crashed on any path that was not indexed**, exiting 70 — the code
+  reserved for "this is a bug", which it was. A not-found result carries the requested
+  path as a plain string, and the Markdown renderer assumed a node dictionary. `why` had
+  an inline guard for this; nothing else did. The renderer now accepts either, so every
+  query renders its own not-found result. Found by probing all commands with input they
+  cannot satisfy.
+- **`import` reported success when the source file did not exist.** It printed a warning
+  inside the payload and exited 0, so a script could not tell the difference between "no
+  provenance to import" and "the file you named is missing". Importing nothing while
+  warning about it now exits 2 and repeats the warning on stderr.
+- **A missing DVC file was described as a directory.** The adapter appended `dvc.yaml`
+  unless the source `is_file()`, so a non-existent `absent.yaml` produced
+  "not found: absent.yaml/dvc.yaml" — a path the user never typed. Only a directory gets
+  the filename appended now.
+- **An empty `--view` silently listed the views** instead of reporting the mistake.
 - **`find` crashed on nearly every query.** The fuzzy fallback sorted `(ratio, dict)`
   tuples, so any two candidates with an equal similarity ratio made Python compare the
   file dictionaries and raise `TypeError`. Since the fallback triggers whenever exact

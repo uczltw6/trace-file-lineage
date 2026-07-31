@@ -356,6 +356,13 @@ def cmd_import(args: argparse.Namespace) -> int:
         summary = apply_adapter_result(store, result)
         summary.update({"source": str(source), "trusted": bool(args.trusted)})
         emit(summary, args.format)
+        # Importing nothing while warning about it is a failure, not a success.
+        # Exiting 0 there told a script the import had worked.
+        imported = summary.get("nodes", 0) + summary.get("edges", 0) + summary.get("runs", 0)
+        if not imported and summary.get("warnings"):
+            for warning in summary["warnings"]:
+                print(f"lineage: {warning}", file=sys.stderr)
+            return EXIT_EXPECTED_FAILURE
         return 0
     finally:
         store.close()
@@ -375,9 +382,13 @@ def cmd_layout(args: argparse.Namespace) -> int:
 
 
 def cmd_views(args: argparse.Namespace) -> int:
-    if args.list or not args.view:
+    if args.list or args.view is None:
         print(list_views(), end="")
         return 0
+    if not args.view.strip():
+        # An empty --view is a mistake; listing instead would hide it.
+        print("lineage: --view needs a name. Use --list to see them.", file=sys.stderr)
+        return EXIT_EXPECTED_FAILURE
     if args.view not in VIEWS:
         print(
             f"lineage: unknown view {args.view!r}. Available: {', '.join(VIEWS)}",
