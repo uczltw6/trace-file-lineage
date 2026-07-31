@@ -5,7 +5,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .origin import OriginRecord, get_xattr, origin_candidates
+from .origin import OriginRecord, get_xattr, native_xattr_available, origin_candidates
 
 WHERE_FROM_XATTR = "com.apple.metadata:kMDItemWhereFroms"
 
@@ -35,6 +35,11 @@ class MacOSDownloadOriginAdapter:
         direct = get_xattr(path, WHERE_FROM_XATTR)
         if direct:
             return direct
+        if native_xattr_available():
+            # A native read already answered authoritatively: this file has no
+            # such attribute. Shelling out to `xattr` anyway would spawn one
+            # process per file, and almost no file carries this attribute.
+            return None
         executable = shutil.which("xattr")
         if not executable:
             return None

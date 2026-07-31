@@ -1,42 +1,42 @@
 {
   "benchmarks": [
     {
-      "cold_seconds": 3.38954,
-      "database_bytes": 6246400,
+      "cold_seconds": 0.50024,
+      "database_bytes": 6230016,
       "image_files": 150,
-      "no_change_seconds": 0.11745,
-      "one_file_changed_seconds": 0.122249,
+      "no_change_seconds": 0.120874,
+      "one_file_changed_seconds": 0.11918,
       "peak_memory_bytes": {
-        "cold": 39026688,
-        "no_change": 42237952,
-        "one_file": 42237952
+        "cold": 44924928,
+        "no_change": 47726592,
+        "one_file": 47890432
       },
       "query_latency": {
-        "p50_ms": 0.7289,
-        "p95_ms": 0.8082
+        "p50_ms": 0.708,
+        "p95_ms": 0.7537
       },
       "text_files": 1000,
       "total_files": 1150,
-      "warm_speedup": 28.859
+      "warm_speedup": 4.139
     },
     {
-      "cold_seconds": 43.522191,
-      "database_bytes": 55885824,
+      "cold_seconds": 16.495649,
+      "database_bytes": 55853056,
       "image_files": 150,
-      "no_change_seconds": 1.076995,
-      "one_file_changed_seconds": 1.060953,
+      "no_change_seconds": 1.130958,
+      "one_file_changed_seconds": 1.236592,
       "peak_memory_bytes": {
-        "cold": 92749824,
-        "no_change": 118030336,
-        "one_file": 118112256
+        "cold": 88539136,
+        "no_change": 113852416,
+        "one_file": 113967104
       },
       "query_latency": {
-        "p50_ms": 6.2526,
-        "p95_ms": 6.7026
+        "p50_ms": 6.2155,
+        "p95_ms": 6.4748
       },
       "text_files": 10000,
       "total_files": 10150,
-      "warm_speedup": 40.411
+      "warm_speedup": 14.586
     }
   ],
   "environment": {

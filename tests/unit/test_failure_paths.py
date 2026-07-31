@@ -146,5 +146,80 @@ class ViewArgumentTests(unittest.TestCase):
             )
 
 
+
+class ScanEfficiencyTests(unittest.TestCase):
+    """The download-origin adapter must not spawn a process per file.
+
+    `os.getxattr` is Linux-only, so on macOS every file fell through to the
+    `xattr` command. Measured at 57% of a cold scan and roughly 38 seconds
+    extrapolated to 10,000 files, for an adapter documented as supplemental.
+    """
+
+    def test_a_scan_does_not_spawn_a_process_per_file(self):
+        from lineage_core.adapters.origin import native_xattr_available
+
+        if not native_xattr_available():
+            self.skipTest("no native xattr reader on this platform")
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for index in range(30):
+                (root / f"file{index}.py").write_text(f"VALUE = {index}\n", encoding="utf-8")
+
+            import subprocess as subprocess_module
+
+            from lineage_core.config import Config
+            from lineage_core.scanner import scan
+            from lineage_core.storage import Store
+
+            calls = {"count": 0}
+            original = subprocess_module.run
+
+            def counting_run(*args, **kwargs):
+                calls["count"] += 1
+                return original(*args, **kwargs)
+
+            subprocess_module.run = counting_run
+            try:
+                config = Config(root)
+                config.output_path.mkdir(parents=True, exist_ok=True)
+                with Store(config.db_path) as store:
+                    result = scan(config, store)
+            finally:
+                subprocess_module.run = original
+
+            self.assertEqual(result.scanned, 30)
+            self.assertLess(
+                calls["count"], 10,
+                f"scanning 30 files spawned {calls['count']} processes; "
+                "the per-file subprocess fallback is back",
+            )
+
+    def test_a_native_reader_makes_the_command_fallback_unnecessary(self):
+        from lineage_core.adapters.macos_downloads import MacOSDownloadOriginAdapter
+        from lineage_core.adapters.origin import native_xattr_available
+
+        if not native_xattr_available():
+            self.skipTest("no native xattr reader on this platform")
+
+        with tempfile.TemporaryDirectory() as temp:
+            plain = Path(temp) / "plain.txt"
+            plain.write_text("no attributes here\n", encoding="utf-8")
+            import subprocess as subprocess_module
+
+            calls = {"count": 0}
+            original = subprocess_module.run
+
+            def counting_run(*args, **kwargs):
+                calls["count"] += 1
+                return original(*args, **kwargs)
+
+            subprocess_module.run = counting_run
+            try:
+                self.assertIsNone(MacOSDownloadOriginAdapter()._where_from_xattr(plain))
+            finally:
+                subprocess_module.run = original
+            self.assertEqual(calls["count"], 0, "a file with no attribute still shelled out")
+
 if __name__ == "__main__":
     unittest.main()
