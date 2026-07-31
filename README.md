@@ -192,8 +192,8 @@ Measured on macOS with Python 3.14, reproducible with `tests/benchmark.py`:
 
 | Project size | First scan | Later runs |
 |---:|---:|---:|
-| 1,000 files | 3.4 s | 0.1 s |
-| 10,000 files | 43 s | 1 s |
+| 1,000 files | 0.5 s | 0.1 s |
+| 10,000 files | 16.5 s | 1.1 s |
 
 The first scan reads everything and shows a progress counter; after that only changes
 are read. Individual questions answer in milliseconds. `node_modules`, virtual
