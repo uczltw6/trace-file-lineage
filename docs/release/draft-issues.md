@@ -11,118 +11,163 @@ to tell whether a project is alive, what is stable, or whether contributions are
 welcome. These are all genuine gaps, not manufactured activity — every one is something
 the code or docs currently lack.
 
----
-
-## 1. Publish the first PyPI release
-
-**Labels:** `release`
-
-The README tells people to install from a Git URL because the package is not on PyPI.
-That loses most would-be users: few people will install an unfamiliar tool from a Git
-URL.
-
-Steps are written up in
-[docs/release/v0.7.0-release-notes.md](../release/v0.7.0-release-notes.md). The release
-workflow already validates the tag against the declared version, runs
-`twine check --strict`, and installs the wheel before publishing.
-
-Blocked on: registering a PyPI trusted publisher, which needs the maintainer's account.
+**Updated after 0.7.0.** Three earlier drafts were removed because the work landed:
+the PyPI release is published, scan progress now reports on stderr, and the
+one-command demo exists as `lineage demo`.
 
 ---
 
-## 2. Add a screen recording of `lineage open` to the README
+## 1. Add a screen recording of `lineage open` to the README
 
 **Labels:** `documentation`, `good first issue`
 
-The interactive graph is the most convincing thing this project does, and the README
-describes it in words. A 10–20 second recording would show it.
+The README explains the interactive graph in words and shows a Mermaid diagram, but
+there is no recording of the real thing. Text makes people understand it; a moving
+picture is what makes them try it.
 
-Suggested sequence:
+About 20 seconds is enough, and the material is now a three-liner:
 
-1. `lineage demo`
-2. `cd lineage-demo && lineage open`
-3. click a node, showing the focus narrowing to its neighbourhood
-4. open one evidence panel so the verified/candidate distinction is visible
-5. widen the hop selector once
+```bash
+pip install trace-file-lineage
+lineage demo
+cd lineage-demo && lineage open
+```
 
-Keep it under 3 MB so it loads on a slow connection. `docs/assets/` is the place for it.
+Worth capturing, in order: the verified-versus-candidate contrast that `demo` prints,
+then the graph, then clicking a node so the focus view narrows to its neighbourhood,
+then the evidence panel.
+
+Keep it under about 3 MB so it loads with the README, and put it in `docs/assets/`.
 
 ---
 
-## 3. Improve JavaScript and TypeScript path detection
+## 2. Improve JavaScript and TypeScript path detection
 
 **Labels:** `enhancement`, `adapters`
 
-JS/TS currently gets a token-level static scan that finds literal `fs` calls and
-imports. It misses common real patterns:
+The JS/TS adapter is a deliberately conservative token scanner, not an AST. It finds
+literal `import` specifiers and straightforward `fs` calls and stops there, which is
+honest but shallow.
 
-- `path.join(__dirname, 'out', name)`
-- template literals with a constant prefix
-- `fs.promises` and stream-based writes
-- re-exported helpers that wrap a write
+Cases it misses today:
 
-The constraint that matters: this must stay a conservative static analysis with no
-dependencies and no code execution. Anything it cannot resolve should stay an
-unresolved pattern rather than becoming a guess. See `docs/adapters.md` for the tier
-this sits in, and keep the capability claims in `lineage doctor` honest.
+- `path.join(__dirname, 'data', 'input.csv')`
+- a path built from a template literal with a constant prefix
+- `require` inside a conditional
+- re-exports that indirect the real module
+
+The constraint that makes this interesting: **the core has no dependencies**, so
+pulling in a real JS parser is not available. Anything here has to be a conservative
+extension of the existing scanner, and must not invent references — a wrong edge is
+worse than a missing one.
+
+See `skills/trace-file-lineage/scripts/lineage_core/adapters/javascript.py`.
 
 ---
 
-## 4. Benchmark and profile a 100,000-file workspace
+## 3. Validate notebook handling against more real corpora
+
+**Labels:** `adapters`, `help wanted`
+
+0.7.0 fixed a real defect here. IPython syntax (`%matplotlib inline`, `!pip install`,
+`%%bash`) made `ast.parse` reject the whole cell, so **63% of notebooks** in one real
+corpus had at least one cell whose file references were silently dropped, while the
+adapter still advertised syntax-aware lineage. See
+[docs/real-world-validation.md](../real-world-validation.md).
+
+That was measured against a single repository. What would help:
+
+- run `lineage scan` on other notebook-heavy projects and report the warning count
+- if warnings remain, paste the cell that failed
+- especially wanted: notebooks using `%%capture`, `%store`, `%run`, or IPython output
+  assignment in less usual forms
+
+A corpus of real failing cells is worth more here than more synthetic fixtures.
+
+---
+
+## 4. Write up a case study on a project with known history
+
+**Labels:** `documentation`, `help wanted`
+
+[docs/real-world-validation.md](../real-world-validation.md) shows the tool runs on
+three externally-authored repositories without crashing, and how fast. It deliberately
+records what those runs do **not** establish:
+
+> Scan behaviour was measured; answer quality was not. These runs show the tool does
+> not crash, is fast enough, and parses what it claims to parse. They do not establish
+> that the ranked origins it produces are the right ones.
+
+Closing that gap needs a project whose true history is known independently, so the
+ranked answers can be graded rather than admired — for example a research directory
+with several hundred files where the author still remembers which script made which
+figure.
+
+Useful output: how many origins were correct, how many came back `insufficient`, and —
+most interesting — any case where a **confident answer was wrong**.
+
+This is the highest-value open question in the project.
+
+---
+
+## 5. Benchmark and profile a 100,000-file workspace
 
 **Labels:** `performance`
 
 Measured today: 1,000 files cold in 3.4 s, 10,000 in 43 s, incremental about 1 s.
-Nothing above that has been measured, and the scaling between those two points is
-already worse than linear.
+Nothing larger has been tried, and 43 s already extrapolates to roughly 7 minutes at
+100k **if** it stays linear — which it may not.
 
-Wanted: a 50k and 100k fixture in `tests/benchmark.py`, a profile of where cold-scan
-time actually goes, and a decision on whether hashing, extraction, or SQLite writes
-dominate. If cold scan is unacceptable at 100k, that belongs in
-`docs/limitations.md` until it is fixed.
+Worth finding out:
 
----
+- is cold scan actually linear, or does something turn quadratic
+- peak memory at 100k (112 MiB at 10k)
+- SQLite index size, and whether query p95 holds
+- whether `explorer_edge_limit` (default 1500) is the right order of magnitude
 
-## 5. Write up a real external case study
-
-**Labels:** `documentation`, `help wanted`
-
-Every example in the docs is a fixture built for the purpose. One honest account of
-running this against a real project — how many artifacts, how many origins recovered,
-how many genuinely unrecoverable, and what was wrong — would be worth more than another
-supported format.
-
-Useful shape: project size, what you ran, what it got right, what it got wrong, and
-where you stopped trusting it. Negative results are welcome and more useful than
-success stories.
+`tests/benchmark.py` generates the existing fixtures and is the place to extend.
 
 ---
 
-## 6. Add a `--json` progress stream for long scans
+## 6. Install lifecycle hooks automatically from `lineage enable`
 
-**Labels:** `enhancement`, `good first issue`
+**Labels:** `enhancement`, `agent-integration`
 
-`lineage scan --progress always` prints a human-readable counter to stderr. Tools
-wrapping this — editor extensions, agent harnesses — would be better served by
-machine-readable progress.
+`lineage enable` writes a required instruction into `CLAUDE.md` and `AGENTS.md`. That
+is far more reliable than hoping the agent recalls the skill, but it is still an
+instruction rather than an enforcement mechanism — an agent can skip it, and a skipped
+record is indistinguishable from "nothing changed".
 
-Suggested: `--progress json` emitting one JSON object per line to stderr with
-`scanned`, `total`, and `elapsed`. `lineage_core/cli.py:make_progress_reporter` is the
-place; add cases to `tests/unit/test_scan_progress.py` alongside the existing ones.
+Lifecycle hooks (`UserPromptSubmit` / `Stop`) capture the boundary without the agent
+having to cooperate at all, and they already exist under `platforms/`. What is missing
+is `lineage enable` offering to wire them up for the detected host, so one command
+gives both the written rule and the mechanical guarantee.
+
+Questions worth settling in the issue before writing code:
+
+- writing host configuration on a user's behalf needs consent; what is the right
+  prompt, and should it be opt-in per host
+- what happens when the host config already contains hooks from another tool
+- how `lineage disable` reverses it exactly, without touching anything else
+
+See `lineage_core/activation.py` and [docs/skill.md](../skill.md).
 
 ---
 
 ## 7. Editor integration: show a file's origin in place
 
-**Labels:** `enhancement`, `integration`
+**Labels:** `enhancement`, `integration`, `good first issue`
 
-The natural moment to ask "where did this come from?" is while looking at the file. A
-small VS Code extension could run `lineage why --format json` on the active file and
-show the ranked candidates with their assurance levels.
+The question "where did this file come from?" usually occurs while looking at the file.
+Today that means switching to a terminal.
 
-No changes to the core are needed — the JSON output is already stable and documented in
-`skills/trace-file-lineage/references/schema.md`. Worth discussing scope before anyone
-writes much: a focused "explain this file" command is probably better than a full panel.
+A thin VS Code extension could show `lineage why` for the active file in a side panel,
+with the assurance label and the evidence. The CLI already emits JSON for every query,
+so no engine work is needed — this is purely a client.
+
+One design constraint to state up front: the extension must show the assurance level
+as prominently as the answer. An integration that renders a `candidate` as though it
+were the answer would undo the thing this project exists to protect.
 
 ---
 
@@ -130,12 +175,19 @@ writes much: a focused "explain this file" command is probably better than a ful
 
 **Labels:** `design`, `question`
 
-Today a recorded run gives `verified` for the artifact version it produced. If the file
-is edited afterwards by hand, the recorded run is still the best explanation for the
-*previous* version but not for the current bytes.
+A wrapped run gives `verified` provenance for a specific artifact version. If the file
+is later edited by hand, that claim describes a version that no longer exists.
 
-The version tracking exists to model this, but the behaviour has not been pinned down
-and there is no test asserting either way. Options: downgrade to `strong-candidate`
-once content changes, keep `verified` but scope it explicitly to the recorded version,
-or surface both. This needs a decision before 1.0 because it affects what `verified`
-means.
+Today the claim stays attached and the version chain records the change. That is
+defensible, but arguably misleading in a summary view.
+
+Options, none obviously right:
+
+1. keep it, and rely on the version chain to disambiguate (current behaviour)
+2. downgrade to `strong-candidate` once content changes after the run
+3. keep `verified` but scope it explicitly, so summary views say "verified for an
+   earlier version of this file"
+
+This is a semantics decision rather than a bug. Opinions from anyone doing
+reproducible research would be genuinely useful, because the right answer depends on
+what people expect the word to mean.
