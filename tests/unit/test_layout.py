@@ -159,5 +159,96 @@ class OutputShapeTests(unittest.TestCase):
             self.assertEqual(before, after)
 
 
+class PlacementSuggestionTests(unittest.TestCase):
+    def test_it_prefers_an_existing_stable_path_over_a_suffix_guess(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write(root, "docs/roadmap.md")
+            write(root, "notes/one.md")
+            write(root, "notes/two.md")
+
+            payload = json.loads(
+                run_cli(
+                    [
+                        "layout", "--root", str(root),
+                        "--suggest", "roadmap.md", "--format", "json",
+                    ]
+                ).stdout
+            )
+
+            suggestion = payload["suggestion"]
+            self.assertEqual(suggestion["suggested_path"], "docs/roadmap.md")
+            self.assertEqual(suggestion["basis"], "existing stable path")
+            self.assertTrue(suggestion["path_already_exists"])
+
+    def test_it_suggests_a_path_from_an_existing_file_type_convention(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write(root, "artifacts/reports/weekly.pdf")
+            write(root, "artifacts/reports/quarterly.pdf")
+            write(root, "archive/legacy.pdf")
+
+            payload = json.loads(
+                run_cli(
+                    [
+                        "layout", "--root", str(root),
+                        "--suggest", "monthly.pdf", "--format", "json",
+                    ]
+                ).stdout
+            )
+
+            suggestion = payload["suggestion"]
+            self.assertEqual(suggestion["status"], "suggested")
+            self.assertEqual(suggestion["suggested_path"], "artifacts/reports/monthly.pdf")
+            self.assertNotIn("\\", suggestion["suggested_path"])
+            self.assertEqual(suggestion["basis"], "existing file-type convention")
+            self.assertEqual(suggestion["examples_seen"], 3)
+            self.assertTrue((root / ".file-lineage" / "lineage.db").is_file())
+
+            markdown = run_cli(
+                ["layout", "--root", str(root), "--suggest", "monthly.pdf"]
+            ).stdout
+            self.assertIn("## Suggested placement", markdown)
+            self.assertIn("**`artifacts/reports/monthly.pdf`**", markdown)
+
+    def test_it_declines_to_guess_without_a_clear_convention(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write(root, "reports/one.pdf")
+            write(root, "archive/two.pdf")
+            run_cli(["scan", "--root", str(root)])
+
+            payload = json.loads(
+                run_cli(
+                    [
+                        "layout", "--root", str(root),
+                        "--suggest", "new.pdf", "--format", "json",
+                    ]
+                ).stdout
+            )
+
+            self.assertEqual(payload["suggestion"]["status"], "insufficient-evidence")
+            self.assertIn("clear directory convention", payload["suggestion"]["reason"])
+
+    def test_it_declines_when_the_same_name_already_exists_in_multiple_places(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write(root, "reports/summary.md")
+            write(root, "archive/summary.md")
+
+            payload = json.loads(
+                run_cli(
+                    [
+                        "layout", "--root", str(root),
+                        "--suggest", "summary.md", "--format", "json",
+                    ]
+                ).stdout
+            )
+
+            suggestion = payload["suggestion"]
+            self.assertEqual(suggestion["status"], "insufficient-evidence")
+            self.assertIn("multiple directories", suggestion["reason"])
+
+
 if __name__ == "__main__":
     unittest.main()

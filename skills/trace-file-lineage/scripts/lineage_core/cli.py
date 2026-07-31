@@ -369,9 +369,13 @@ def cmd_import(args: argparse.Namespace) -> int:
 
 
 def cmd_layout(args: argparse.Namespace) -> int:
-    _, store = open_store(Path(args.root))
+    config, store = open_store(Path(args.root))
     try:
-        payload = analyse_layout(store)
+        # Placement guidance must work on first use. Requiring a separate scan
+        # would make an empty index look like an empty workspace and turn a
+        # clear convention into a false "insufficient evidence" result.
+        scan(config, store)
+        payload = analyse_layout(store, args.suggest)
         if args.format == "json":
             emit(payload)
         else:
@@ -693,7 +697,7 @@ SUBCOMMAND_HELP = {
     "disable": "stop requiring per-task lineage records in this project",
     "status": "show whether continuous mode is on and whether an index exists",
     "views": "render a chosen angle on the graph; --list shows every available view",
-    "layout": "report how the workspace is organised, and what looks like drift",
+    "layout": "report workspace conventions and suggest where a planned output belongs",
 }
 
 
@@ -706,6 +710,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  lineage demo            build a sample project and trace it\n"
             "  lineage enable          make the agent record every task from now on\n"
             "  lineage views --list    pick a view: project map, one file, a run, duplicates…\n"
+            "  lineage layout --suggest FILE   place a new output by existing conventions\n"
             "  lineage explain FILE    where did this artifact come from?\n"
             "  lineage open            browse the whole graph in a local HTML explorer\n"
             "  lineage run -- CMD      record what a command changed\n"
@@ -881,6 +886,7 @@ def build_parser() -> argparse.ArgumentParser:
     rescore.set_defaults(handler=cmd_rescore)
     layout_parser = sub.add_parser("layout", help=SUBCOMMAND_HELP["layout"])
     layout_parser.add_argument("--root", default=".")
+    layout_parser.add_argument("--suggest", metavar="PATH", help="suggest where a planned output should live")
     layout_parser.add_argument("--format", choices=["markdown", "json"], default="markdown")
     layout_parser.set_defaults(handler=cmd_layout)
     views_parser = sub.add_parser("views", help=SUBCOMMAND_HELP["views"])

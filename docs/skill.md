@@ -9,7 +9,7 @@ Nothing to enable. Ask your agent a question, or run the commands yourself:
 ```sh
 lineage explain report.pdf          # where did this come from?
 lineage views --list                # pick an angle
-lineage layout                      # how is this project organised?
+lineage layout --suggest report.pdf # where should this output live?
 ```
 
 Use this for a historic project you did not track, or a one-off question.
@@ -28,8 +28,10 @@ This writes a required instruction into the project's own agent memory —
 the end of **every** task, where to put new files, and to report assurance rather
 than presenting a guess as proof.
 
-From then on, files created in this project get `verified` provenance instead of
-inferred guesses, because the run that produced them was observed.
+From then on, each cooperating agent records the changed-file boundary and reports
+the result as a directory tree. That proves which files changed during the task; it
+does **not** prove authorship. Use `lineage run -- <command>` when you need verified
+evidence that a particular command changed an artifact.
 
 `lineage status` shows whether it is on. `lineage disable` removes exactly the
 block it added and nothing else.
@@ -72,14 +74,20 @@ Each renders as `--format markdown` (default), `json`, or `mermaid`.
 ## Keeping the workspace tidy
 
 ```sh
-lineage layout
+lineage layout --suggest monthly.pdf
 ```
 
 Reports the conventions the project already follows — where `.py` files usually
 live, where outputs usually go — plus the shapes that normally mean drift:
 single-file directories, names carrying `final`/`v2`/`copy`/a date, very long
-filenames, deep nesting, crowded directories.
+filenames, deep nesting, crowded directories. With `--suggest`, it first reuses a
+unique existing filename as the stable path. Otherwise it recommends a path only
+when repeated files establish a clear file-type convention; ambiguous names or
+layouts return `insufficient-evidence` instead of a guess.
 
-It is **read-only**. Nothing is moved, renamed, or deleted; acting on it stays
-your decision. Continuous mode points the agent at this command so new files
-follow the existing layout instead of adding another `output_final_v2/`.
+It is **read-only with respect to project files**. It refreshes the derived local
+index, but nothing is moved, renamed, or deleted; acting on the advice stays your
+decision. Continuous mode points the agent at this command so new files follow the
+existing layout instead of adding another `output_final_v2/`. At the end of the
+task, `lineage views --view agent-run` prints the complete changed-file manifest as
+a nested structure.

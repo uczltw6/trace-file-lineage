@@ -15,10 +15,10 @@ import re
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .query import impact, orphans, resolve, run_show, why
+from .query import impact, orphans, receipt, resolve, why
 from .storage import Store
 
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".svg", ".webp", ".tiff", ".gif", ".bmp"})
@@ -45,6 +45,57 @@ def _real_files(store: Store) -> list[dict[str, Any]]:
         for item in store.files()
         if not item["path"].startswith("@") and not item.get("deleted")
     ]
+
+
+def _path_tree(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build a stable, JSON-safe directory tree from path-bearing entries.
+
+    The intermediate node map avoids repeatedly scanning child lists while the
+    tree is built. `_freeze` then exposes a small public shape with directories
+    first and files second, which makes both JSON and human renderings stable.
+    """
+    root: dict[str, Any] = {"name": ".", "path": ".", "type": "directory", "_children": {}}
+    for entry in sorted(entries, key=lambda item: item.get("path") or ""):
+        path = str(entry.get("path") or "").replace("\\", "/").strip("/")
+        if not path:
+            continue
+        cursor = root
+        parts = PurePosixPath(path).parts
+        for index, part in enumerate(parts):
+            current_path = "/".join(parts[: index + 1])
+            is_file = index == len(parts) - 1
+            child = cursor["_children"].setdefault(
+                part,
+                {
+                    "name": part,
+                    "path": current_path,
+                    "type": "file" if is_file else "directory",
+                    "_children": {},
+                },
+            )
+            if is_file:
+                child.update(
+                    {
+                        key: entry[key]
+                        for key in ("kind", "change", "previous_path")
+                        if entry.get(key) is not None
+                    }
+                )
+            cursor = child
+
+    def _freeze(node: dict[str, Any]) -> dict[str, Any]:
+        children = [_freeze(child) for child in node.get("_children", {}).values()]
+        children.sort(key=lambda child: (child["type"] != "directory", child["name"].lower(), child["name"]))
+        frozen = {key: value for key, value in node.items() if key != "_children"}
+        if node["type"] == "directory":
+            frozen["children"] = children
+            frozen["file_count"] = sum(
+                child.get("file_count", 1 if child["type"] == "file" else 0)
+                for child in children
+            )
+        return frozen
+
+    return _freeze(root)
 
 
 # --------------------------------------------------------------------------- views
@@ -76,6 +127,7 @@ def view_project_map(store: Store, options: dict[str, Any]) -> dict[str, Any]:
         "file_count": len(files),
         "directory_count": len(groups),
         "groups": groups,
+        "tree": _path_tree(files),
     }
 
 
@@ -213,7 +265,8 @@ def view_agent_run(store: Store, options: dict[str, Any]) -> dict[str, Any]:
     if not runs:
         return {"view": "agent-run", "status": "ok", "run_count": 0, "runs": [], "detail": None}
     chosen = options.get("run") or runs[-1]["id"]
-    detail = run_show(store, chosen)
+    detail = receipt(store, chosen)
+    detail["structure"] = _path_tree(detail.get("manifest", []))
     return {
         "view": "agent-run",
         "status": "ok",

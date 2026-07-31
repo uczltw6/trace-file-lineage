@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict
-from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any
 
 from .storage import Store
@@ -23,6 +23,7 @@ LONG_NAME_CHARS = 60
 DEEP_PATH_SEGMENTS = 6
 CROWDED_DIRECTORY_FILES = 40
 MAX_REPORTED = 15
+MIN_CONVENTION_SHARE = 0.67
 
 # `final`, `v2`, `new`, `copy`, a bare date: names that accrete instead of replacing.
 # The separator class includes a space, because "report copy.md" is exactly the
@@ -41,12 +42,13 @@ def _real_files(store: Store) -> list[dict[str, Any]]:
     ]
 
 
-def _conventions(paths: list[str]) -> dict[str, Any]:
+def _conventions(paths: list[str], *, limit: int | None = MAX_REPORTED) -> dict[str, Any]:
     """What this project already does, so an agent can match it."""
     by_suffix: dict[str, Counter[str]] = defaultdict(Counter)
     for path in paths:
-        parent = str(Path(path).parent)
-        by_suffix[Path(path).suffix.lower()][parent] += 1
+        normalized = PurePosixPath(path.replace("\\", "/"))
+        parent = str(normalized.parent)
+        by_suffix[normalized.suffix.lower()][parent] += 1
 
     conventions = []
     for suffix, directories in sorted(by_suffix.items()):
@@ -64,14 +66,96 @@ def _conventions(paths: list[str]) -> dict[str, Any]:
             }
         )
     conventions.sort(key=lambda entry: -entry["total"])
-    return {"by_suffix": conventions[:MAX_REPORTED]}
+    return {"by_suffix": conventions[:limit] if limit is not None else conventions}
 
 
-def analyse(store: Store) -> dict[str, Any]:
+def _suggest_placement(requested_path: str, conventions: dict[str, Any], paths: set[str]) -> dict[str, Any]:
+    """Suggest a directory only when the workspace has a matching convention."""
+    requested = PurePosixPath(requested_path.replace("\\", "/"))
+    suffix = requested.suffix.lower()
+    same_name = sorted(
+        path
+        for path in paths
+        if PurePosixPath(path).name.lower() == requested.name.lower()
+    )
+    requested_normalized = str(requested)
+    existing_path = (
+        requested_normalized
+        if requested_normalized in paths
+        else same_name[0] if len(same_name) == 1 else None
+    )
+    if existing_path:
+        return {
+            "status": "suggested",
+            "requested_path": requested_path,
+            "suggested_directory": str(PurePosixPath(existing_path).parent),
+            "suggested_path": existing_path,
+            "suffix": suffix,
+            "share": 1.0,
+            "examples_seen": 1,
+            "basis": "existing stable path",
+            "path_already_exists": True,
+            "reason": (
+                f"A file named {requested.name} already exists at {existing_path}; "
+                "reuse that stable path only when the new output supersedes it."
+            ),
+        }
+    if len(same_name) > 1:
+        return {
+            "status": "insufficient-evidence",
+            "requested_path": requested_path,
+            "suffix": suffix,
+            "reason": (
+                f"{requested.name} already exists in multiple directories, so its "
+                "name does not establish one safe destination."
+            ),
+        }
+
+    matching = next(
+        (entry for entry in conventions["by_suffix"] if entry["suffix"] == suffix),
+        None,
+    )
+    if not suffix or not matching or matching["share"] < MIN_CONVENTION_SHARE:
+        return {
+            "status": "insufficient-evidence",
+            "requested_path": requested_path,
+            "suffix": suffix,
+            "reason": (
+                "No repeated file type establishes a clear directory convention for this output."
+            ),
+        }
+
+    directory = matching["usual_directory"]
+    suggested = (
+        str(PurePosixPath(directory) / requested.name)
+        if directory not in {"", "."}
+        else requested.name
+    )
+    return {
+        "status": "suggested",
+        "requested_path": requested_path,
+        "suggested_directory": directory,
+        "suggested_path": suggested,
+        "suffix": suffix,
+        "share": matching["share"],
+        "examples_seen": matching["total"],
+        "basis": "existing file-type convention",
+        "path_already_exists": suggested in paths,
+        "reason": (
+            f"{int(matching['share'] * 100)}% of the workspace's {suffix} files "
+            f"already live in {directory}."
+        ),
+    }
+
+
+def analyse(store: Store, suggest: str | None = None) -> dict[str, Any]:
     files = _real_files(store)
     paths = [item["path"] for item in files]
+    all_conventions = _conventions(paths, limit=None)
+    conventions = {"by_suffix": all_conventions["by_suffix"][:MAX_REPORTED]}
 
-    per_directory: Counter[str] = Counter(str(Path(path).parent) for path in paths)
+    normalized_paths = [PurePosixPath(path.replace("\\", "/")) for path in paths]
+    per_directory: Counter[str] = Counter(str(path.parent) for path in normalized_paths)
     lonely = sorted(
         directory for directory, count in per_directory.items()
         if count == 1 and directory not in {".", ""}
@@ -81,9 +165,9 @@ def analyse(store: Store) -> dict[str, Any]:
          if count >= CROWDED_DIRECTORY_FILES),
         key=lambda entry: -entry["file_count"],
     )
-    long_names = sorted(path for path in paths if len(Path(path).name) > LONG_NAME_CHARS)
-    deep = sorted(path for path in paths if len(Path(path).parts) > DEEP_PATH_SEGMENTS)
-    drifting = sorted(path for path in paths if DRIFT_TOKENS.search(Path(path).stem))
+    long_names = sorted(str(path) for path in normalized_paths if len(path.name) > LONG_NAME_CHARS)
+    deep = sorted(str(path) for path in normalized_paths if len(path.parts) > DEEP_PATH_SEGMENTS)
+    drifting = sorted(str(path) for path in normalized_paths if DRIFT_TOKENS.search(path.stem))
 
     findings = []
     if lonely:
@@ -99,7 +183,10 @@ def analyse(store: Store) -> dict[str, Any]:
         findings.append(
             {
                 "finding": "very long filenames",
-                "detail": f"Names longer than {LONG_NAME_CHARS} characters usually encode information that belongs in a directory or a version chain.",
+                "detail": (
+                    f"Names longer than {LONG_NAME_CHARS} characters usually encode "
+                    "information that belongs in a directory or a version chain."
+                ),
                 "count": len(long_names),
                 "examples": long_names[:MAX_REPORTED],
             }
@@ -108,7 +195,10 @@ def analyse(store: Store) -> dict[str, Any]:
         findings.append(
             {
                 "finding": "deeply nested paths",
-                "detail": f"More than {DEEP_PATH_SEGMENTS} path segments makes files hard to find and hard to reference.",
+                "detail": (
+                    f"More than {DEEP_PATH_SEGMENTS} path segments makes files hard "
+                    "to find and hard to reference."
+                ),
                 "count": len(deep),
                 "examples": deep[:MAX_REPORTED],
             }
@@ -117,7 +207,11 @@ def analyse(store: Store) -> dict[str, Any]:
         findings.append(
             {
                 "finding": "accreting names",
-                "detail": "Names carrying final/new/copy/v2/a date usually mean a new file was written where the old one should have been replaced. Reusing the path turns these into a version history instead.",
+                "detail": (
+                    "Names carrying final/new/copy/v2/a date usually mean a new file "
+                    "was written where the old one should have been replaced. Reusing "
+                    "the path turns these into a version history instead."
+                ),
                 "count": len(drifting),
                 "examples": drifting[:MAX_REPORTED],
             }
@@ -132,15 +226,23 @@ def analyse(store: Store) -> dict[str, Any]:
             }
         )
 
-    return {
+    payload = {
         "query": "layout",
         "status": "ok",
         "file_count": len(files),
         "directory_count": len(per_directory),
-        "conventions": _conventions(paths),
+        "conventions": conventions,
         "findings": findings,
         "note": "Read-only. This never moves, renames, or deletes anything.",
     }
+    if suggest:
+        normalized_path_strings = {str(path) for path in normalized_paths}
+        payload["suggestion"] = _suggest_placement(
+            suggest,
+            all_conventions,
+            normalized_path_strings,
+        )
+    return payload
 
 
 def render_layout(payload: dict[str, Any]) -> str:
@@ -165,6 +267,30 @@ def render_layout(payload: dict[str, Any]) -> str:
             )
     else:
         lines.append("No repeated file type yet, so there is no convention to follow.")
+
+    suggestion = payload.get("suggestion")
+    if suggestion:
+        lines += ["", "## Suggested placement", ""]
+        if suggestion["status"] == "suggested":
+            lines += [
+                f"Planned output: `{suggestion['requested_path']}`",
+                "",
+                f"Suggested path: **`{suggestion['suggested_path']}`**",
+                "",
+                f"Basis: {suggestion['reason']}",
+            ]
+            if suggestion["path_already_exists"]:
+                lines += [
+                    "",
+                    "That path already exists. Reuse it only when the new output "
+                    "supersedes the existing artifact.",
+                ]
+        else:
+            lines += [
+                f"No supported suggestion for `{suggestion['requested_path']}`.",
+                "",
+                suggestion["reason"],
+            ]
 
     lines += ["", "## Findings", ""]
     if not payload["findings"]:

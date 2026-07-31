@@ -66,8 +66,9 @@ Being direct, because a tool that claims to fit everything fits nothing:
   Table-level lineage is a different problem with better-suited tools.
 - **You need deep JavaScript, Java, Go, or Rust analysis.** Python and notebooks are
   parsed properly. Everything else is text-indexed with conservative literal references.
-- **You want files organized or cleaned up.** It never moves, renames, or deletes
-  anything, and it never will.
+- **You want automatic cleanup or enforced placement.** It can recommend where an
+  agent should put an output, write that rule into agent memory, and report the
+  resulting file tree. It never moves, renames, or deletes anything itself.
 
 ## What it is actually good at
 
@@ -75,6 +76,8 @@ Being direct, because a tool that claims to fit everything fits nothing:
   its evidence* rather than a confident-sounding guess.
 - An agent or script produced a large batch of files and you need them grouped and
   explained rather than listed.
+- An agent is about to create a file and should follow the workspace's established
+  directory conventions instead of inventing a new output folder.
 - You want to know what a change to an input would affect, before making it.
 - You want zero setup: no server, no account, no API key, no declaration file, and no
   dependency beyond Python.

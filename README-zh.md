@@ -36,7 +36,7 @@ Trace File Lineage 会读取项目里的代码、文档、文件元数据和 Git
 
 你可以把它理解为**项目文件的“来源侦探”**：Git 记录“文件什么时候变了”，它尝试回答“文件是怎么来的”。它尤其适合 Python、Jupyter Notebook、数据分析、科研代码，以及 AI Agent 一次生成大量文件的项目。
 
-> 它分析文件，但不会执行你的项目代码，也不会移动、重命名或删除任何文件。
+> 扫描和回溯分析不会执行项目代码，也不会移动、重命名或删除文件。只有你显式使用 `lineage run -- <command>` 时，它才会执行你提供的那条命令。
 
 它实际解决三类问题：
 
@@ -82,12 +82,13 @@ figures/trend.svg 是从哪里来的？
 
 ```bash
 lineage enable
-lineage layout
+lineage layout --suggest reports/monthly.pdf
 ```
 
 `lineage layout` 会告诉 Agent：
 
 - `.py`、`.csv`、图片、报告等文件通常分别放在哪些目录；
+- 先复用项目中唯一的同名稳定路径；没有同名文件时，再按明确的文件类型惯例建议目录；如果证据不足，就直说而不是猜；
 - 应该复用哪些已有目录，而不是随手创建 `output_final_v2/`、`results_new/` 或日期目录；
 - 哪些文件名过长、目录嵌套过深或使用了 `final`、`copy`、`v2` 等容易失控的命名；
 - 一个目录是否过于拥挤，或者是否出现了只装一个文件的零散目录。
@@ -100,17 +101,17 @@ lineage views --view agent-run          # 某次 Agent 任务的全部产出
 lineage views --view project-map        # 按目录分组的项目文件结构
 ```
 
-`project-map` 可以输出 Markdown、JSON 或 Mermaid。得到的结构会类似这样：
+`agent-run` 会把本次任务的完整清单渲染成真正的嵌套目录树；`project-map` 则展示整个项目的文件树。它们都可以输出 Markdown、JSON 或 Mermaid。任务报告会类似这样：
 
 ```text
-project/
-├── data/       原始数据和中间数据
-├── analysis/   脚本和 Notebook
-├── figures/    生成的图表
-└── reports/    最终报告
+.
+├── figures/
+│   └── chart.svg [created]
+└── reports/
+    └── summary.md [modified]
 ```
 
-这里需要说准确：**工具不会擅自移动文件。** `lineage layout` 是只读分析；真正的文件放置由 Agent 按写入项目的规则执行，最终决定仍然属于你。
+这里需要说准确：**工具不会擅自移动文件。** `lineage layout` 是只读分析；真正的文件放置由 Agent 按写入项目的规则执行，最终决定仍然属于你。`snapshot` / `record` 只能证明文件在一次任务边界内发生了变化；只有 `lineage run` 捕获到的命令或其他直接证据，才能证明具体进程生成了文件。
 
 ## 最常用的几个命令
 
@@ -136,7 +137,7 @@ lineage run --task "生成月度报告" -- python scripts/build_report.py
 lineage receipt
 ```
 
-如果项目主要由 AI Agent 持续维护，还可以运行 `lineage enable`，让 Agent 在每次任务结束时记录文件变化。`lineage status` 用于查看状态，`lineage disable` 只删除工具自己添加的配置区块。详见 [安装与持续记录说明](docs/install.md)。
+如果项目主要由 AI Agent 持续维护，还可以运行 `lineage enable`，让 Agent 在每次任务结束时记录文件变化，并按目录汇报完整产出结构。`lineage status` 用于查看状态，`lineage disable` 只删除工具自己添加的配置区块。详见 [安装与持续记录说明](docs/install.md)。
 
 ### 3. 查看修改一个文件会影响什么
 
@@ -163,6 +164,7 @@ lineage open
 | 查看一个文件的候选来源 | `lineage why FILE` |
 | 查找两个文件之间的关系路径 | `lineage path SOURCE TARGET` |
 | 找出没有明确来源的文件 | `lineage orphans` |
+| 为新产出建议放置路径 | `lineage layout --suggest FILE` |
 | 检查项目目录结构是否混乱 | `lineage layout` |
 | 检查本机支持哪些文件格式 | `lineage doctor` |
 
@@ -175,8 +177,8 @@ lineage open
 | 追查文件来源 | `explain`、`why`、`alternatives`、`source-chain` | 找生成脚本、输入文件、竞争候选和完整来源链 |
 | 分析下游影响 | `impact`、`stale`、`path`、`orphans` | 判断修改输入后会影响什么、哪些产物可能过期 |
 | 记录脚本或 Agent 任务 | `run`、`snapshot`、`record`、`receipt`、`recover` | 记录一次任务实际改动过的文件，并处理未正常结束的记录 |
-| 约束 Agent 的文件放置 | `enable`、`status`、`disable`、`layout` | 让 Agent 遵循项目已有目录惯例，减少随意堆放和重复命名 |
-| 查看项目结构 | `project-map`、`agent-run`、`pipeline`、`timeline` | 按目录、任务、流水线或时间查看文件 |
+| 约束 Agent 的文件放置 | `enable`、`status`、`disable`、`layout --suggest` | 优先复用稳定路径，再用明确的文件类型惯例建议目录，减少随意堆放和重复命名 |
+| 查看项目结构 | `project-map`、`agent-run`、`pipeline`、`timeline` | 查看整个项目树、单次任务的改动树、流水线或时间线 |
 | 查专项关系 | `file-history`、`code-to-image`、`document-export`、`duplicates`、`sweeps` | 查看单个文件历史、代码到图片、文档到 PDF、重复文件和参数扫描 |
 | 搜索项目内容 | `find`、`search` | 按文件名、已索引文本或 OCR 文本查找内容 |
 | 可视化与导出 | `open`、`export` | 生成离线交互图，或导出 Markdown、JSON、Mermaid、HTML、W3C PROV、Obsidian |
@@ -231,7 +233,7 @@ pip install "trace-file-lineage[pdf]"
 
 - 所有分析都在本地完成，不需要账号、API Key 或 AI 服务；
 - 不上传文件，也不会发起云端分析请求；
-- 只读取代码，不执行代码；
+- 扫描和回溯分析只读取代码、不执行代码；`lineage run` 只执行你在 `--` 后明确提供的命令；
 - 自动跳过 `.env`、密码和密钥等敏感内容；
 - 记录命令时会清除看起来像密码的参数；
 - 记录 AI Agent 活动时，只保留摘要和改动文件列表，不保存对话或 Prompt。

@@ -1,7 +1,8 @@
 # CLI reference
 
-Every command is local, never executes your project code, and never moves source files.
-Run `lineage --help` or `lineage <command> --help` for exact flags.
+Every command is local and never moves source files. Analysis commands do not execute
+your project code; `lineage run` executes only the command explicitly supplied after
+`--`. Run `lineage --help` or `lineage <command> --help` for exact flags.
 
 The canonical local index is `.file-lineage/lineage.db`. Deleting `.file-lineage/`
 removes the derived index only.
@@ -57,6 +58,9 @@ find an artifact → explain why → read the run receipt → check stale output
 | `run -- CMD` | Wrap a command, preserve its exit code, print a concise receipt |
 | `run-show RUN_ID` | Summarize one run and its clusters |
 | `receipt [RUN_ID]` | Complete manifest for one run; latest finalized run by default |
+| `views --view VIEW` | Project, file, pipeline, task, duplicate, and timeline views |
+| `layout [--suggest PATH]` | Report workspace conventions and optionally suggest an output path |
+| `enable` / `status` / `disable` | Manage the continuous agent instruction block |
 | `recover` | List or recover hook runs left `in_progress` after a missed `Stop` |
 | `reproduce FILE` | Dry-run-only reproduction plan; never executes |
 | `confirm` | Persist a user-confirmed causal claim |
@@ -73,8 +77,10 @@ Use `open --no-launch` in CI or another headless environment.
 ## Output formats
 
 Query commands (`why`, `impact`, `stale`, `path`, `orphans`, `receipt`, `run-show`,
-`reproduce`) default to Markdown and accept `--format json`. `doctor` defaults to a
-readable report and accepts `--format json` for the complete machine-readable ledger.
+`reproduce`, `layout`) default to Markdown and accept `--format json`. `views`
+accepts Markdown, JSON, or Mermaid; `project-map` and `agent-run` include nested file
+structures in Markdown and JSON. `doctor` defaults to a readable report and accepts
+`--format json` for the complete machine-readable ledger.
 Machine-first commands (`find`, `search`, `confirm`, `reject`, `undo`, `rescore`,
 `import`) emit JSON.
 
@@ -100,6 +106,18 @@ lineage record --root . --before .file-lineage/before.json --task "Prepare submi
 A snapshot boundary proves observed co-change, not authorship. The wrapper can verify
 that its child changed a particular artifact version, but cannot name an internal
 writer function without deeper instrumentation.
+
+Before creating a new output, ask for a placement backed by the current index:
+
+```bash
+lineage layout --root . --suggest monthly.pdf
+```
+
+The suggestion reuses a unique existing filename first; otherwise it follows a clear
+repeated convention for the same suffix and shows its evidence. It declines with
+`insufficient-evidence` when duplicate names or the workspace layout are ambiguous.
+`layout` refreshes the local index automatically, but never creates or moves the
+planned output.
 
 ## Settings
 

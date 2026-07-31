@@ -115,6 +115,20 @@ class ViewContentTests(unittest.TestCase):
         self.assertIn("analysis", directories)
         self.assertGreater(payload["file_count"], 5)
 
+    def test_project_map_includes_a_real_nested_directory_tree(self):
+        payload = self.view("project-map")
+        tree = payload["tree"]
+        self.assertEqual(tree["type"], "directory")
+        self.assertEqual(tree["file_count"], payload["file_count"])
+        data = next(child for child in tree["children"] if child["name"] == "data")
+        self.assertEqual(data["type"], "directory")
+        self.assertIn("raw.csv", {child["name"] for child in data["children"]})
+
+        rendered = run_cli(["views", "--view", "project-map", "--root", str(self.root)]).stdout
+        self.assertIn("## File structure", rendered)
+        self.assertIn("├──", rendered)
+        self.assertIn("data/", rendered)
+
     def test_file_history_shows_both_directions_for_one_file(self):
         payload = self.view("file-history", file="data/clean.csv")
         self.assertEqual(payload["target"]["path"], "data/clean.csv")
@@ -173,6 +187,39 @@ class ViewContentTests(unittest.TestCase):
         rendered = json.dumps(payload)
         self.assertIn("plot.py", rendered)
         self.assertIn("data/clean.csv", rendered)
+
+    def test_agent_run_lists_changes_and_groups_them_as_a_tree(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "src").mkdir()
+            (root / "src" / "base.py").write_text("VALUE = 1\n", encoding="utf-8")
+            before = root / ".file-lineage" / "before.json"
+            run_cli(["snapshot", "--root", str(root), "--output", str(before)])
+
+            (root / "figures").mkdir()
+            (root / "reports").mkdir()
+            (root / "figures" / "chart.svg").write_text("<svg/>\n", encoding="utf-8")
+            (root / "reports" / "summary.md").write_text("# Summary\n", encoding="utf-8")
+            run_cli(["record", "--root", str(root), "--before", str(before), "--task", "Build report"])
+
+            payload = json.loads(
+                run_cli(["views", "--view", "agent-run", "--root", str(root), "--format", "json"]).stdout
+            )
+            manifest = payload["detail"]["manifest"]
+            self.assertEqual({item["path"] for item in manifest}, {"figures/chart.svg", "reports/summary.md"})
+            structure = payload["detail"]["structure"]
+            self.assertEqual({child["name"] for child in structure["children"]}, {"figures", "reports"})
+
+            rendered = run_cli(["views", "--view", "agent-run", "--root", str(root)]).stdout
+            self.assertIn("### Changed-file structure", rendered)
+            self.assertIn("chart.svg [created]", rendered)
+            self.assertIn("summary.md [created]", rendered)
+
+            mermaid = run_cli(
+                ["views", "--view", "agent-run", "--root", str(root), "--format", "mermaid"]
+            ).stdout
+            self.assertIn("figures/chart.svg", mermaid)
+            self.assertIn("reports/summary.md", mermaid)
 
     def test_views_needing_a_file_say_so_instead_of_failing_obscurely(self):
         completed = run_cli(

@@ -52,12 +52,28 @@ optional or best-effort:
    lineage run --root . --task "<what you did>" -- <command>
    ```
 
+4. **End the task with a structured file report**, not a flat dump of paths:
+
+   ```sh
+   lineage receipt --root .
+   lineage views --view agent-run --root .
+   ```
+
+   Summarise created, modified, renamed, and deleted files grouped by directory.
+   The `agent-run` view prints a changed-file tree; use it to show where outputs
+   were placed. Report whether the record is a verified command run or an
+   observed task boundary. Do not describe a snapshot boundary as proof of
+   authorship.
+
 ### Where to put new files
 
 Before writing a new file, look at what the project already does and follow it:
 
 - Put outputs where comparable outputs already live. Run
-  `lineage layout --root .` to see the existing conventions.
+  `lineage layout --root . --suggest <planned-file>` to get a placement backed
+  by the existing conventions. If it reports insufficient evidence, inspect
+  `lineage layout --root .` and choose deliberately instead of inventing a
+  directory from a generic template.
 - Reuse existing directories rather than inventing new ones. Do **not** create
   `output_final_v2/`, `results_new/`, or a directory named after today's date
   unless the project already works that way.

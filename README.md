@@ -2,8 +2,8 @@
 
 # Trace File Lineage
 
-**Find out which script, notebook, data file, command, or AI agent produced a file —
-locally, with evidence, and with honest uncertainty.**
+**Trace where files came from, keep AI-agent output in the right place, and see
+what each task changed — locally, with evidence, and with honest uncertainty.**
 
 [📖 Docs](docs/skill.md) • [🎯 Views](docs/skill.md#choosing-a-view) • [⚖️ vs DVC / Git](docs/comparison.md) • [📊 Real-world results](docs/real-world-validation.md)
 
@@ -25,6 +25,12 @@ locally, with evidence, and with honest uncertainty.**
 Built for Python and notebook work: research code, data analysis, and the piles of
 files AI coding agents now generate.
 
+| When you need to know… | What it gives you |
+|---|---|
+| Where an existing file came from | Ranked scripts, notebooks, inputs, and runs, with the evidence for each |
+| Where an agent should put a new output | An existing stable path or a suggestion backed by this workspace's conventions |
+| What one task actually produced | A complete manifest plus a nested changed-file structure |
+
 ```bash
 pip install trace-file-lineage
 lineage demo
@@ -36,7 +42,7 @@ above is that command's real output.
 
 ---
 
-## It does two different things
+## Two evidence modes
 
 Being precise about this up front, because they give different kinds of answer:
 
@@ -68,7 +74,7 @@ together ever becomes proof. When the evidence genuinely isn't there, the answer
 
 ---
 
-## Two things people use it for
+## Common workflows
 
 ### 1. "Where did this old file come from?"
 
@@ -88,10 +94,12 @@ trail is gone.
 ```bash
 lineage run --task "Parameter sweep" -- python sweep.py
 lineage receipt
+lineage views --view agent-run
 ```
 
 Every file that run touched, recorded as proof, grouped rather than dumped as 150
-separate mysteries. Works the same for an AI agent's turn as for a script.
+separate mysteries. `agent-run` renders the complete manifest as a nested directory
+tree, so you can see both what changed and where the outputs landed.
 
 Then, before you change an input:
 
@@ -99,6 +107,21 @@ Then, before you change an input:
 lineage impact data/raw.csv     # what depends on this
 lineage stale data/raw.csv      # what is now out of date
 ```
+
+### 3. "Where should the agent put this report?"
+
+```bash
+lineage layout --suggest monthly.pdf
+```
+
+It first reuses a unique existing filename when one already establishes a stable
+path. Otherwise, if most existing PDFs live in `reports/`, the result suggests
+`reports/monthly.pdf` and shows the evidence behind that recommendation. If the
+workspace has no clear convention, it says so instead of inventing a folder.
+
+`lineage enable` writes this placement check and an end-of-task structure report
+into `AGENTS.md` and `CLAUDE.md`. Placement analysis never moves, renames, or deletes
+files.
 
 ---
 
@@ -175,7 +198,8 @@ Run `lineage doctor` for what your own machine can read.
 ## Everything stays local
 
 - **Nothing is uploaded, ever.** No account, no API key, no AI service.
-- **Your code is never executed.** It is read and analysed.
+- Scanning and retrospective analysis never execute your code. `lineage run` executes
+  only the command you explicitly place after `--`.
 - Passwords, keys, and `.env` files are skipped automatically.
 - Recorded commands have password-looking arguments stripped.
 - From an AI agent, only a summary and the changed-file list is kept — never your
@@ -269,7 +293,7 @@ python -m unittest discover -s tests -p 'test_*.py'   # run the tests
 ```bash
 lineage explain report.pdf     # where did this come from?
 lineage views --list           # pick an angle: project map, one file, a run, duplicates…
-lineage layout                 # how is this project organised, and what looks like drift?
+lineage layout --suggest report.pdf  # where should this output live?
 ```
 
 **Continuous** — for a project you are actively working in:
@@ -280,8 +304,10 @@ lineage enable
 
 That writes a required instruction into the project's `CLAUDE.md` and `AGENTS.md`,
 so the agent records a boundary after **every** task instead of when it happens to
-remember, and places new files by the project's existing conventions. From then on
-new files get `verified` provenance rather than inferred guesses.
+remember, checks placement against the project's existing conventions, and reports
+changed files as a directory tree. A boundary proves that files changed during the
+task; only a captured command (`lineage run`) or other direct evidence proves which
+process produced them.
 `lineage status` shows whether it is on; `lineage disable` removes exactly that block.
 
 It is an instruction, not an enforcement mechanism — more reliable than hoping the

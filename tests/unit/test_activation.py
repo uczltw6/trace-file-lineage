@@ -68,6 +68,18 @@ class EnableTests(unittest.TestCase):
                 "the rule needs to read as an obligation, not a hint",
             )
 
+    def test_the_rule_requires_a_grouped_changed_file_report(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            run_cli(["enable", "--root", str(root)])
+            text = (root / MEMORY_FILES[0]).read_text(encoding="utf-8")
+
+            self.assertIn("lineage receipt", text)
+            self.assertIn("--view agent-run", text)
+            self.assertIn("layout --root . --suggest <planned-file>", text)
+            self.assertIn("grouped by directory", text)
+            self.assertIn("Do not describe a snapshot boundary as proof", text)
+
     def test_enabling_twice_does_not_duplicate_the_block(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

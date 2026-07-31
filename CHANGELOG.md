@@ -5,6 +5,27 @@ All notable changes to this project are documented here. This project follows
 minor releases add compatible adapters or queries, and major releases may change the
 schema or CLI contracts with migration guidance.
 
+## Unreleased
+
+### Added
+
+- `lineage layout --suggest PATH` recommends a destination only when repeated files
+  establish a clear convention for that file type. A unique existing filename wins
+  as the stable path; duplicate names or ambiguous layouts produce insufficient
+  evidence instead of a guess. It refreshes the index first, so the recommendation
+  also works on first use.
+- `project-map` now includes a real nested file tree. `agent-run` renders the complete
+  changed-file manifest as a directory tree with created, modified, renamed, and
+  deleted annotations.
+
+### Fixed
+
+- The `agent-run` view read a summary shape that did not contain file changes, so its
+  Markdown and Mermaid output omitted every changed file. It now uses the complete run
+  receipt and keeps command-level proof distinct from an observed task boundary.
+- Layout conventions now use stable `/`-separated workspace paths on Windows instead
+  of leaking platform separators into JSON and Markdown output.
+
 ## [0.7.0] — 2026-07-30
 
 ### Security
